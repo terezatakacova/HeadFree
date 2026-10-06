@@ -11,19 +11,53 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Unzip project
+      - name: Unzip and prepare project
         shell: bash
         run: |
-         unzip -q HeadFree_fixed.zip -d extracted
+          unzip -q HeadFree_fixed.zip -d extracted
+
           PROJECT=$(find extracted -type d -name "*.xcodeproj" -print -quit)
+
           if [ -z "$PROJECT" ]; then
             echo "ERROR: Xcode project not found"
             exit 1
           fi
+
           if [ ! -f "$PROJECT/project.pbxproj" ]; then
             echo "ERROR: project.pbxproj not found"
             exit 1
           fi
+
+          APP_DIR=$(find "$(dirname "$PROJECT")" -type f -name "ContentView.swift" -print -quit | xargs dirname)
+
+          if [ -z "$APP_DIR" ] || [ ! -d "$APP_DIR" ]; then
+            echo "ERROR: App source folder not found"
+            exit 1
+          fi
+
+          APP_FILE="$APP_DIR/HeadFreeApp.swift"
+
+          if [ ! -f "$APP_FILE" ]; then
+            SOURCE_APP=$(find "$APP_DIR" -type f -name "*App.swift" -print -quit)
+
+            if [ -z "$SOURCE_APP" ]; then
+              echo "ERROR: No App.swift file found"
+              exit 1
+            fi
+
+            cp "$SOURCE_APP" "$APP_FILE"
+          fi
+
+          sed -i '' 's/struct HeadFeeApp: App/struct HeadFreeApp: App/' "$APP_FILE"
+
+          echo "PROJECT=$PROJECT"
+          echo "APP_FILE=$APP_FILE"
+
+          if [ ! -f "$APP_FILE" ]; then
+            echo "ERROR: HeadFreeApp.swift still missing"
+            exit 1
+          fi
+
           echo "PROJECT=$PROJECT" >> "$GITHUB_ENV"
 
       - name: Build iOS app
