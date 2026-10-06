@@ -14,7 +14,7 @@ jobs:
       - name: Unzip project
         shell: bash
         run: |
-          unzip -q HeadFree.zip -d extracted
+         unzip -q HeadFree_fixed.zip -d extracted
           PROJECT=$(find extracted -type d -name "*.xcodeproj" -print -quit)
           if [ -z "$PROJECT" ]; then
             echo "ERROR: Xcode project not found"
