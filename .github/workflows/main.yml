@@ -16,77 +16,14 @@ jobs:
         run: |
           unzip -q HeadFree.zip -d extracted
           PROJECT=$(find extracted -type d -name "*.xcodeproj" -print -quit)
-
           if [ -z "$PROJECT" ]; then
             echo "ERROR: Xcode project not found"
             exit 1
           fi
-
-          echo "Found: $PROJECT"
-
           if [ ! -f "$PROJECT/project.pbxproj" ]; then
             echo "ERROR: project.pbxproj not found"
             exit 1
           fi
-
-          echo "project.pbxproj found"
-          echo "PROJECT=$PROJECT" >> "$GITHUB_ENV"
-
-      - name: Build iOS app
-        shell: bash
-        run: |
-          xcodebuild \
-            -project "$PROJECT" \
-            -scheme HeadFree \
-            -sdk iphoneos \
-            -configuration Release \
-            -derivedDataPath build \
-            CODE_SIGNING_ALLOWED=NO \
-            CODE_SIGNING_REQUIRED=NO
-
-      - name: Create IPA
-        shell: bash
-        run: |
-          mkdir -p Payload
-          cp -R build/Build/Products/Release-iphoneos/HeadFree.app Payload/
-          zip -r HeadFree.ipa Payload
-
-      - name: Upload IPA
-        uses: actions/upload-artifact@v4
-        with:
-          name: HeadFree-IPA
-          path: HeadFree.ipaname: Build HeadFree
-
-on:
-  workflow_dispatch:
-
-jobs:
-  build:
-    runs-on: macos-14
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Unzip project
-        shell: bash
-        run: |
-          unzip -q HeadFree.zip -d extracted
-          PROJECT=$(find extracted -type d -name "*.xcodeproj" -print -quit)
-
-          if [ -z "$PROJECT" ]; then
-            echo "ERROR: Xcode project not found"
-            exit 1
-          fi
-
-          echo "Found: $PROJECT"
-
-          if [ ! -f "$PROJECT/project.pbxproj" ]; then
-            echo "ERROR: project.pbxproj not found"
-            exit 1
-          fi
-
-          echo "project.pbxproj found"
           echo "PROJECT=$PROJECT" >> "$GITHUB_ENV"
 
       - name: Build iOS app
