@@ -15,7 +15,7 @@ jobs:
         run: |
           unzip -q HeadFree.zip
           echo "Project contents:"
-          find HeadFree/HeadFree.xcodeproj -type f -print
+          find . -name project.pbxproj -print
 
       - name: Build iOS app
         run: |
