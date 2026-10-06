@@ -15,7 +15,7 @@ jobs:
         run: |
           unzip -q HeadFee.zip
           echo "Project contents:"
-          find . -maxdepth 3 -type f | head -100
+          find . -maxdepth 5-type f | head -100
 
       - name: Build iOS app
         run: |
