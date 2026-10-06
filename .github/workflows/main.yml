@@ -13,7 +13,7 @@ jobs:
 
       - name: Unzip project
         run: |
-          unzip -q HeadFee.zip
+          unzip -q HeadFree.zip
           echo "Project contents:"
           find HeadFree/HeadFree.xcodeproj -type f -print
 
