@@ -14,31 +14,22 @@ jobs:
       - name: Unzip project
         shell: bash
         run: |
-          rm -rf extracted
-          mkdir extracted
           unzip -q HeadFree.zip -d extracted
-
-          echo "Searching for Xcode project..."
           PROJECT=$(find extracted -type d -name "*.xcodeproj" -print -quit)
 
           if [ -z "$PROJECT" ]; then
-            echo "ERROR: No .xcodeproj found"
-            find extracted -maxdepth 6 -print
+            echo "ERROR: Xcode project not found"
             exit 1
           fi
 
-          echo "Found project:"
-          echo "$PROJECT"
+          echo "Found: $PROJECT"
 
-          echo "Checking project.pbxproj..."
           if [ ! -f "$PROJECT/project.pbxproj" ]; then
-            echo "ERROR: project.pbxproj is missing"
-            find "$PROJECT" -maxdepth 2 -print
+            echo "ERROR: project.pbxproj not found"
             exit 1
           fi
 
           echo "project.pbxproj found"
-
           echo "PROJECT=$PROJECT" >> "$GITHUB_ENV"
 
       - name: Build iOS app
@@ -80,31 +71,22 @@ jobs:
       - name: Unzip project
         shell: bash
         run: |
-          rm -rf extracted
-          mkdir extracted
           unzip -q HeadFree.zip -d extracted
-
-          echo "Searching for Xcode project..."
           PROJECT=$(find extracted -type d -name "*.xcodeproj" -print -quit)
 
           if [ -z "$PROJECT" ]; then
-            echo "ERROR: No .xcodeproj found"
-            find extracted -maxdepth 6 -print
+            echo "ERROR: Xcode project not found"
             exit 1
           fi
 
-          echo "Found project:"
-          echo "$PROJECT"
+          echo "Found: $PROJECT"
 
-          echo "Checking project.pbxproj..."
           if [ ! -f "$PROJECT/project.pbxproj" ]; then
-            echo "ERROR: project.pbxproj is missing"
-            find "$PROJECT" -maxdepth 2 -print
+            echo "ERROR: project.pbxproj not found"
             exit 1
           fi
 
           echo "project.pbxproj found"
-
           echo "PROJECT=$PROJECT" >> "$GITHUB_ENV"
 
       - name: Build iOS app
@@ -130,5 +112,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: HeadFree-IPA
-          path: HeadFree.ipa
           path: HeadFree.ipa
