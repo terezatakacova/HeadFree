@@ -13,7 +13,7 @@ jobs:
 
       - name: Unzip project
         run: |
-          unzip -q HeadFree.zip
+          unzip -q HeadFee.zip
           echo "Project contents:"
           find . -maxdepth 3 -type f | head -100
 
