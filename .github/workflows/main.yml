@@ -20,7 +20,7 @@ jobs:
       - name: Build iOS app
         run: |
           xcodebuild \
-            -project HeadFee/HeadFree.xcodeproj \
+            -project HeadFree/HeadFree.xcodeproj \
             -scheme HeadFree \
             -sdk iphoneos \
             -configuration Release \
