@@ -15,7 +15,7 @@ jobs:
         run: |
           unzip -q HeadFee.zip
           echo "Project contents:"
-          find . -maxdepth 5-type f | head -100
+          1s -1a HeadFree/HeadFree.xcodeproj
 
       - name: Build iOS app
         run: |
