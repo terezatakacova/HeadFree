@@ -15,7 +15,7 @@ jobs:
         run: |
           unzip -q HeadFee.zip
           echo "Project contents:"
-          1s -1a HeadFree/HeadFree.xcodeproj
+          find HeadFree/HeadFree.xcodeproj -type f -print
 
       - name: Build iOS app
         run: |
