@@ -76,3 +76,5 @@ let dest = CGImageDestinationCreateWithURL(url as CFURL, "public.png" as CFStrin
 CGImageDestinationAddImage(dest, image, nil)
 CGImageDestinationFinalize(dest)
 print(out)
+
+// retrigger final verified build
