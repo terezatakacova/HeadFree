@@ -36,9 +36,10 @@ jobs:
 
           perl -0pi -e 's/                if let data = Data\(base64Encoded: hfReferenceBranchBase64\),.*?                }\n\n/                HFBotanicalBranch()\n                    .frame(width: min(235, geo.size.width * 0.48), height: min(430, geo.size.height * 0.52))\n                    .opacity(0.78)\n                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)\n                    .padding(.leading, -8)\n                    .padding(.top, 34)\n\n/s' "$APP_DIR/ContentView.swift"
 
-          python3 - <<'PY'
+          python3 - "$APP_DIR/ContentView.swift" <<'PY'
+          import sys
           from pathlib import Path
-          p = Path("$APP_DIR/ContentView.swift")
+          p = Path(sys.argv[1])
           s = p.read_text()
 
           intro_start = s.index("struct HFIntroView: View {")
@@ -87,6 +88,10 @@ jobs:
               )
 
           s = s[:intro_start] + intro + s[intro_end:]
+
+          vector = Path("HeadFree_VectorBranch.swift").read_text()
+          if "struct HFIntroBotanicalBranch: View" not in s:
+              s = s.replace("struct HeadFreeHomeView: View {", vector + "\nstruct HeadFreeHomeView: View {", 1)
 
           if "struct HFBotanicalBranch: View" not in s:
               branch = '''struct HFBotanicalBranch: View {
