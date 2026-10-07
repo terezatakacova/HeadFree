@@ -78,3 +78,5 @@ CGImageDestinationFinalize(dest)
 print(out)
 
 // retrigger final verified build
+
+// final source replacement fix
