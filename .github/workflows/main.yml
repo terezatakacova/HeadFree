@@ -22,11 +22,10 @@ jobs:
           sudo xcode-select -s /Applications/Xcode_26.6.app/Contents/Developer
           xcodebuild -version
 
-      - name: Verify and extract final project
+      - name: Extract and verify FINAL v2 project
         shell: bash
         run: |
           set -euo pipefail
-
           ZIP="HeadFree_FINAL_DESIGN_FIXED_v2.zip"
           test -f "$ZIP"
 
@@ -47,15 +46,17 @@ jobs:
           grep -q 'INFOPLIST_KEY_UILaunchScreen_Generation = YES;' "$PROJECT/project.pbxproj"
           grep -q 'INFOPLIST_KEY_UIRequiresFullScreen = NO;' "$PROJECT/project.pbxproj"
 
+          SOURCE_SHA=$(shasum -a 256 "$APP_DIR/ContentView.swift" | awk '{print $1}')
           echo "PROJECT=$PROJECT" >> "$GITHUB_ENV"
           echo "APP_DIR=$APP_DIR" >> "$GITHUB_ENV"
-          echo "Final project verified: $PROJECT"
+          echo "SOURCE_SHA=$SOURCE_SHA" >> "$GITHUB_ENV"
+          echo "FINAL_V2_SOURCE_SHA=$SOURCE_SHA"
 
-      - name: Build iOS app
+      - name: Build iOS app from clean output
         shell: bash
         run: |
           set -euo pipefail
-          rm -rf build Payload HeadFree.ipa
+          rm -rf build Payload
 
           xcodebuild \
             -project "$PROJECT" \
@@ -67,29 +68,56 @@ jobs:
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGN_IDENTITY=""
 
-      - name: Verify built app
+      - name: Stamp build identity into app
         shell: bash
         run: |
           set -euo pipefail
           APP="build/Build/Products/Release-iphoneos/HeadFree.app"
           test -d "$APP"
           test -f "$APP/Info.plist"
-          /usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$APP/Info.plist"
-          echo "HeadFree.app successfully built."
 
-      - name: Create IPA
+          /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $GITHUB_RUN_NUMBER" "$APP/Info.plist" || \
+            /usr/libexec/PlistBuddy -c "Add :CFBundleVersion string $GITHUB_RUN_NUMBER" "$APP/Info.plist"
+
+          cat > "$APP/HEADFREE_BUILD.txt" <<MARKER
+HeadFree FINAL v2
+GitHub run: $GITHUB_RUN_NUMBER
+Run ID: $GITHUB_RUN_ID
+Source SHA256: $SOURCE_SHA
+Built with: Xcode 26.6 / macOS 26
+MARKER
+
+          echo "===== BUILD MARKER ====="
+          cat "$APP/HEADFREE_BUILD.txt"
+          echo "========================"
+
+      - name: Verify final app
         shell: bash
         run: |
           set -euo pipefail
+          APP="build/Build/Products/Release-iphoneos/HeadFree.app"
+          test -f "$APP/HEADFREE_BUILD.txt"
+          grep -q "GitHub run: $GITHUB_RUN_NUMBER" "$APP/HEADFREE_BUILD.txt"
+          grep -q "Source SHA256: $SOURCE_SHA" "$APP/HEADFREE_BUILD.txt"
+          /usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$APP/Info.plist"
+          /usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "$APP/Info.plist"
+
+      - name: Create uniquely named IPA
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf Payload
           mkdir -p Payload
           cp -R build/Build/Products/Release-iphoneos/HeadFree.app Payload/HeadFree.app
-          /usr/bin/zip -qry HeadFree.ipa Payload
-          test -s HeadFree.ipa
-          ls -lh HeadFree.ipa
+          IPA="HeadFree-${GITHUB_RUN_NUMBER}.ipa"
+          /usr/bin/zip -qry "$IPA" Payload
+          test -s "$IPA"
+          echo "IPA=$IPA" >> "$GITHUB_ENV"
+          ls -lh "$IPA"
 
-      - name: Upload IPA
+      - name: Upload uniquely named IPA
         uses: actions/upload-artifact@v4
         with:
-          name: HeadFree-IPA
-          path: HeadFree.ipa
+          name: HeadFree-IPA-${{ github.run_number }}
+          path: ${{ env.IPA }}
           if-no-files-found: error
