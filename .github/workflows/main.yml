@@ -39,78 +39,111 @@ jobs:
           python3 - "$APP_DIR/ContentView.swift" <<'PY'
           import sys
           from pathlib import Path
+
           p = Path(sys.argv[1])
           s = p.read_text()
 
           intro_start = s.index("struct HFIntroView: View {")
           intro_end = s.index("struct HeadFreeHomeView: View {")
-          intro = s[intro_start:intro_end]
 
-          intro = intro.replace(
-                  'Text("HeadFree")',
-                  '''VStack(spacing: 8) {
-                      Text("HeadFree")
-                          .font(
-                              .system(
-                                  size: 32,
-                                  weight: .regular,
-                                  design: .serif
-                              )
-                          )
-                          .foregroundStyle(
-                              Color(
-                                  red: 0.245,
-                                  green: 0.255,
-                                  blue: 0.225
-                              )
-                          )
+          intro = r'''struct HFIntroView: View {
+              let onContinue: () -> Void
 
-                      Text("Calm your mind.\\nFree your head.")
-                          .font(
-                              .system(
-                                  size: 15,
-                                  weight: .medium,
-                                  design: .serif
-                              )
-                          )
-                          .tracking(1.4)
-                          .multilineTextAlignment(.center)
-                          .foregroundStyle(
-                              Color(
-                                  red: 0.470,
-                                  green: 0.465,
-                                  blue: 0.405
-                              )
-                          )
-                  }''',
-                  1
-              )
+              private let cream = Color(red: 0.955, green: 0.935, blue: 0.885)
+              private let olive = Color(red: 0.430, green: 0.510, blue: 0.355)
+              private let text = Color(red: 0.245, green: 0.255, blue: 0.225)
+              private let subtitle = Color(red: 0.470, green: 0.465, blue: 0.405)
 
-          s = s[:intro_start] + intro + s[intro_end:]
-
-          vector = Path("HeadFree_VectorBranch.swift").read_text()
-          if "struct HFIntroBotanicalBranch: View" not in s:
-              s = s.replace("struct HeadFreeHomeView: View {", vector + "\nstruct HeadFreeHomeView: View {", 1)
-
-          if "struct HFBotanicalBranch: View" not in s:
-              branch = '''struct HFBotanicalBranch: View {
               var body: some View {
-                  Group {
-                      if let data = Data(base64Encoded: hfReferenceBranchBase64),
-                         let image = UIImage(data: data) {
-                          Image(uiImage: image)
-                              .resizable()
-                              .interpolation(.high)
-                              .scaledToFit()
+                  GeometryReader { geo in
+                      ZStack {
+                          cream.ignoresSafeArea()
+
+                          if let data = Data(base64Encoded: hfReferenceBranchBase64),
+                             let uiImage = UIImage(data: data) {
+                              Image(uiImage: uiImage)
+                                  .resizable()
+                                  .interpolation(.high)
+                                  .scaledToFit()
+                                  .scaleEffect(x: -1, y: 1)
+                                  .frame(
+                                      width: min(235, geo.size.width * 0.60),
+                                      height: min(430, geo.size.height * 0.52)
+                                  )
+                                  .opacity(0.82)
+                                  .frame(
+                                      maxWidth: .infinity,
+                                      maxHeight: .infinity,
+                                      alignment: .topLeading
+                                  )
+                                  .padding(.leading, -8)
+                                  .padding(.top, 34)
+                          }
+
+                          VStack(alignment: .leading, spacing: 0) {
+                              Text("HeadFree")
+                                  .font(
+                                      .system(
+                                          size: 42,
+                                          weight: .regular,
+                                          design: .serif
+                                      )
+                                  )
+                                  .foregroundStyle(text)
+                                  .padding(.bottom, 14)
+
+                              Text("Calm your mind.\\nFree your head.")
+                                  .font(
+                                      .system(
+                                          size: 17,
+                                          weight: .regular,
+                                          design: .serif
+                                      )
+                                  )
+                                  .tracking(0.4)
+                                  .lineSpacing(7)
+                                  .foregroundStyle(subtitle)
+                          }
+                          .frame(maxWidth: .infinity, alignment: .leading)
+                          .padding(.leading, 68)
+                          .padding(.top, geo.size.height * 0.48)
+
+                          VStack {
+                              Spacer()
+
+                              Button(action: onContinue) {
+                                  HStack {
+                                      Text("Pokračovať")
+                                          .font(.system(size: 16, weight: .medium))
+
+                                      Spacer()
+
+                                      Image(systemName: "arrow.right")
+                                          .font(.system(size: 16, weight: .regular))
+                                  }
+                                  .foregroundStyle(.white)
+                                  .padding(.horizontal, 20)
+                                  .frame(
+                                      width: min(250, geo.size.width * 0.68),
+                                      height: 54
+                                  )
+                                  .background(olive, in: Capsule())
+                              }
+                              .buttonStyle(.plain)
+                              .padding(
+                                  .bottom,
+                                  max(28, geo.safeAreaInsets.bottom + 20)
+                              )
+                          }
                       }
                   }
-                  .allowsHitTesting(false)
+                  .ignoresSafeArea()
               }
           }
 
           '''
-              s = s.replace("struct HeadFreeHomeView: View {", branch + "struct HeadFreeHomeView: View {", 1)
 
+          s = s[:intro_start] + intro + s[intro_end:]
           p.write_text(s)
           PY
 
