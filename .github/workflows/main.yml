@@ -46,8 +46,7 @@ jobs:
           intro_end = s.index("struct HeadFreeHomeView: View {")
           intro = s[intro_start:intro_end]
 
-          if 'Text("MENEJ V HLAVE.' not in intro:
-              intro = intro.replace(
+          intro = intro.replace(
                   'Text("HeadFree")',
                   '''VStack(spacing: 8) {
                       Text("HeadFree")
