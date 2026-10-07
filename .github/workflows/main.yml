@@ -2,6 +2,10 @@ name: Build HeadFree
 
 on:
   workflow_dispatch:
+  push:
+    paths:
+      - 'HeadFree_FINAL_DESIGN_FIXED_v2.zip'
+      - '.github/workflows/main.yml'
 
 jobs:
   build:
@@ -11,45 +15,57 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Select Xcode 26
+      - name: Select Xcode 26.6
         shell: bash
         run: |
           sudo xcode-select -s /Applications/Xcode_26.6.app/Contents/Developer
           xcodebuild -version
 
-      - name: Unzip and prepare project
+      - name: Verify final project ZIP
         shell: bash
         run: |
+          test -f HeadFree_FINAL_DESIGN_FIXED_v2.zip
+          echo "Using: HeadFree_FINAL_DESIGN_FIXED_v2.zip"
+          ls -lh HeadFree_FINAL_DESIGN_FIXED_v2.zip
+
+      - name: Unzip final project
+        shell: bash
+        run: |
+          rm -rf extracted
           unzip -q HeadFree_FINAL_DESIGN_FIXED_v2.zip -d extracted
 
           PROJECT=$(find extracted -type d -name "*.xcodeproj" -print -quit)
-          if [ -z "$PROJECT" ] || [ ! -f "$PROJECT/project.pbxproj" ]; then
-            echo "ERROR: Xcode project not found"
+          if [ -z "$PROJECT" ]; then
+            echo "ERROR: Xcode project not found in FINAL v2 ZIP"
+            find extracted -maxdepth 4 -type f | head -100
             exit 1
           fi
 
-          APP_DIR=$(find "$(dirname "$PROJECT")" -type f -name "ContentView.swift" -print -quit | xargs dirname)
-          if [ -z "$APP_DIR" ] || [ ! -d "$APP_DIR" ]; then
-            echo "ERROR: App source folder not found"
+          if [ ! -f "$PROJECT/project.pbxproj" ]; then
+            echo "ERROR: project.pbxproj not found"
             exit 1
           fi
 
-          APP_FILE="$APP_DIR/HeadFreeApp.swift"
-          if [ ! -f "$APP_FILE" ]; then
-            SOURCE_APP=$(find "$APP_DIR" -type f -name "*App.swift" -print -quit)
-            if [ -z "$SOURCE_APP" ]; then
-              echo "ERROR: No App.swift file found"
-              exit 1
-            fi
-            cp "$SOURCE_APP" "$APP_FILE"
-          fi
-
-          sed -i '' 's/struct HeadFeeApp: App/struct HeadFreeApp: App/' "$APP_FILE"
           echo "PROJECT=$PROJECT" >> "$GITHUB_ENV"
+          echo "Using project: $PROJECT"
 
-      - name: Build iOS app
+      - name: Verify final source and modern screen settings
         shell: bash
         run: |
+          APP_DIR=$(dirname "$(find "$(dirname "$PROJECT")" -type f -name "ContentView.swift" -print -quit)")
+          test -f "$APP_DIR/ContentView.swift"
+          test -f "$APP_DIR/HeadFreeApp.swift"
+
+          grep -q 'headFreeIntroBase64' "$APP_DIR/ContentView.swift"
+          grep -q 'INFOPLIST_KEY_UILaunchScreen_Generation = YES;' "$PROJECT/project.pbxproj"
+          grep -q 'INFOPLIST_KEY_UIRequiresFullScreen = NO;' "$PROJECT/project.pbxproj"
+
+          echo "Final source/settings verified."
+
+      - name: Build iOS app with Xcode 26
+        shell: bash
+        run: |
+          rm -rf build Payload HeadFree.ipa
           xcodebuild \
             -project "$PROJECT" \
             -scheme HeadFree \
@@ -57,19 +73,21 @@ jobs:
             -configuration Release \
             -derivedDataPath build \
             CODE_SIGNING_ALLOWED=NO \
-            CODE_SIGNING_REQUIRED=NO
+            CODE_SIGNING_REQUIRED=NO \
+            INFOPLIST_KEY_UILaunchScreen_Generation=YES
 
       - name: Create IPA
         shell: bash
         run: |
+          test -d build/Build/Products/Release-iphoneos/HeadFree.app
           mkdir -p Payload
           cp -R build/Build/Products/Release-iphoneos/HeadFree.app Payload/
-          zip -r HeadFree.ipa Payload
+          /usr/bin/zip -qry HeadFree.ipa Payload
+          ls -lh HeadFree.ipa
 
       - name: Upload IPA
         uses: actions/upload-artifact@v4
         with:
           name: HeadFree-IPA
           path: HeadFree.ipa
-
-          path: HeadFree.ipa
+          if-no-files-found: error
