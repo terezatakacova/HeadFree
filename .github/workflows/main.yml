@@ -137,6 +137,21 @@ jobs:
 
           echo "PROJECT=$PROJECT" >> "$GITHUB_ENV"
 
+      - name: Export source for inspection
+        shell: bash
+        run: |
+          set -e
+          SOURCE=$(find extracted -type f -name "ContentView.swift" -print -quit)
+          test -n "$SOURCE"
+          cp "$SOURCE" ContentView.swift
+
+      - name: Upload source
+        uses: actions/upload-artifact@v4
+        with:
+          name: HeadFree-Source-${{ github.run_number }}
+          path: ContentView.swift
+          if-no-files-found: error
+
       - name: Build iOS app
         shell: bash
         run: |
