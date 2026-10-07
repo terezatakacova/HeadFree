@@ -4,59 +4,41 @@ on:
   workflow_dispatch:
   push:
     paths:
-      - 'HeadFree_FINAL_DESIGN_FIXED_v2.zip'
-      - 'HeadFree_IconGenerator.swift'
-      - 'HeadFree_VectorBranch.swift'
+      - 'HeadFree_FINAL_DESIGN.zip'
+      - 'HeadFree_AppIcon.png'
       - '.github/workflows/main.yml'
 
 jobs:
   build:
     runs-on: macos-26
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-
       - name: Select Xcode 26.6
         shell: bash
         run: |
           set -e
           sudo xcode-select -s /Applications/Xcode_26.6.app/Contents/Developer
           xcodebuild -version
-
       - name: Prepare final project
         shell: bash
         run: |
           set -e
           rm -rf extracted build Payload
-          unzip -q HeadFree_FINAL_DESIGN_FIXED_v2.zip -d extracted
+          unzip -q HeadFree_FINAL_DESIGN.zip -d extracted
           PROJECT=$(find extracted -type d -name "*.xcodeproj" -print -quit)
           test -n "$PROJECT"
           APP_DIR=$(find "$(dirname "$PROJECT")" -type f -name "ContentView.swift" -print -quit | xargs dirname)
           test -f "$APP_DIR/ContentView.swift"
-
-          perl -0pi -e 's/                if let data = Data\(base64Encoded: hfReferenceBranchBase64\),.*?                }\n\n/                HFIntroBotanicalBranch()\n                    .frame(width: min(245, geo.size.width * 0.50), height: min(470, geo.size.height * 0.56))\n                    .opacity(0.88)\n                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)\n                    .padding(.leading, -4)\n                    .padding(.top, 24)\n\n/s' "$APP_DIR/ContentView.swift"
-
-          perl -0pi -e 's/\.font\(\.system\(size: 42, weight: \.regular, design: \.serif\)\)/.font(.custom("Georgia", size: 42))/g' "$APP_DIR/ContentView.swift"
-
-          awk '/^struct HFEditingTask: Identifiable \{/{system("cat HeadFree_VectorBranch.swift")} {print}' "$APP_DIR/ContentView.swift" > "$APP_DIR/ContentView.swift.tmp"
-          mv "$APP_DIR/ContentView.swift.tmp" "$APP_DIR/ContentView.swift"
-
+          test -f HeadFree_AppIcon.png
+          cp HeadFree_AppIcon.png "$APP_DIR/Assets.xcassets/AppIcon.appiconset/AppIcon.png"
           sed -i '' 's/com.terezatakacova.HeadFree/com.terezatakacova.HeadFree4/g' "$PROJECT/project.pbxproj"
-          swift HeadFree_IconGenerator.swift "$APP_DIR/Assets.xcassets/AppIcon.appiconset/AppIcon.png"
-
-          grep -q 'HFIntroBotanicalBranch' "$APP_DIR/ContentView.swift"
-          grep -q 'com.terezatakacova.HeadFree4' "$PROJECT/project.pbxproj"
-          test -f "$APP_DIR/Assets.xcassets/AppIcon.appiconset/AppIcon.png"
-
           echo "PROJECT=$PROJECT" >> "$GITHUB_ENV"
-
       - name: Build iOS app
         shell: bash
         run: |
           set -e
           xcodebuild -project "$PROJECT" -scheme HeadFree -sdk iphoneos -configuration Release -derivedDataPath build CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY=""
-
       - name: Create IPA
         shell: bash
         run: |
@@ -66,7 +48,6 @@ jobs:
           cp -R build/Build/Products/Release-iphoneos/HeadFree.app Payload/HeadFree.app
           /usr/bin/zip -qry "HeadFree-${GITHUB_RUN_NUMBER}.ipa" Payload
           ls -lh "HeadFree-${GITHUB_RUN_NUMBER}.ipa"
-
       - name: Upload IPA
         uses: actions/upload-artifact@v4
         with:
