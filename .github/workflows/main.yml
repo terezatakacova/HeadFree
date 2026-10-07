@@ -92,7 +92,7 @@ jobs:
                                   .foregroundStyle(text)
                                   .padding(.bottom, 14)
 
-                              Text("Calm your mind.\\nFree your head.")
+                              Text("Calm your mind.\nFree your head.")
                                   .font(
                                       .system(
                                           size: 17,
