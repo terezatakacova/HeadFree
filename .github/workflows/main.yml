@@ -14,7 +14,7 @@ jobs:
       - name: Unzip and prepare project
         shell: bash
         run: |
-          unzip -q HeadFree_FINAL_DESIGN.zip -d extracted
+          unzip -q HeadFree_FINAL_DESIGN_FIXED.zip -d extracted
 
           PROJECT=$(find extracted -type d -name "*.xcodeproj" -print -quit)
 
