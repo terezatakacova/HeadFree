@@ -121,7 +121,7 @@ jobs:
           swift HeadFree_IconGenerator.swift "$APP_DIR/Assets.xcassets/AppIcon.appiconset/AppIcon.png"
 
           grep -q 'HFBotanicalBranch' "$APP_DIR/ContentView.swift"
-          grep -q 'MENEJ V HLAVE.' "$APP_DIR/ContentView.swift"
+          grep -q 'Calm your mind.' "$APP_DIR/ContentView.swift"
           grep -q 'com.terezatakacova.HeadFree5' "$PROJECT/project.pbxproj"
           grep -q 'INFOPLIST_KEY_UIRequiresFullScreen = YES;' "$PROJECT/project.pbxproj"
           test -f "$APP_DIR/Assets.xcassets/AppIcon.appiconset/AppIcon.png"
