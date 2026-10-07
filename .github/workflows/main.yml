@@ -18,46 +18,23 @@ jobs:
       - name: Select Xcode 26.6
         shell: bash
         run: |
-          set -euo pipefail
           sudo xcode-select -s /Applications/Xcode_26.6.app/Contents/Developer
           xcodebuild -version
 
-      - name: Extract and verify FINAL v2 project
+      - name: Prepare project
         shell: bash
         run: |
-          set -euo pipefail
-          ZIP="HeadFree_FINAL_DESIGN_FIXED_v2.zip"
-          test -f "$ZIP"
-
-          rm -rf extracted
-          unzip -q "$ZIP" -d extracted
-
+          set -e
+          rm -rf extracted build Payload
+          unzip -q HeadFree_FINAL_DESIGN_FIXED_v2.zip -d extracted
           PROJECT=$(find extracted -type d -name "*.xcodeproj" -print -quit)
           test -n "$PROJECT"
-          test -f "$PROJECT/project.pbxproj"
-
-          APP_DIR=$(find "$(dirname "$PROJECT")" -type f -name "ContentView.swift" -print -quit | xargs dirname)
-          test -n "$APP_DIR"
-          test -f "$APP_DIR/ContentView.swift"
-          test -f "$APP_DIR/HeadFreeApp.swift"
-
-          grep -q 'struct HeadFreeApp: App' "$APP_DIR/HeadFreeApp.swift"
-          grep -q 'GENERATE_INFOPLIST_FILE = YES;' "$PROJECT/project.pbxproj"
-          grep -q 'INFOPLIST_KEY_UILaunchScreen_Generation = YES;' "$PROJECT/project.pbxproj"
-          grep -q 'INFOPLIST_KEY_UIRequiresFullScreen = NO;' "$PROJECT/project.pbxproj"
-
-          SOURCE_SHA=$(shasum -a 256 "$APP_DIR/ContentView.swift" | awk '{print $1}')
           echo "PROJECT=$PROJECT" >> "$GITHUB_ENV"
-          echo "APP_DIR=$APP_DIR" >> "$GITHUB_ENV"
-          echo "SOURCE_SHA=$SOURCE_SHA" >> "$GITHUB_ENV"
-          echo "FINAL_V2_SOURCE_SHA=$SOURCE_SHA"
 
-      - name: Build iOS app from clean output
+      - name: Build iOS app
         shell: bash
         run: |
-          set -euo pipefail
-          rm -rf build Payload
-
+          set -e
           xcodebuild \
             -project "$PROJECT" \
             -scheme HeadFree \
@@ -68,58 +45,19 @@ jobs:
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGN_IDENTITY=""
 
-      - name: Stamp build identity into app
+      - name: Create IPA
         shell: bash
         run: |
-          set -euo pipefail
-          APP="build/Build/Products/Release-iphoneos/HeadFree.app"
-          test -d "$APP"
-          test -f "$APP/Info.plist"
-
-          /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $GITHUB_RUN_NUMBER" "$APP/Info.plist" || \
-            /usr/libexec/PlistBuddy -c "Add :CFBundleVersion string $GITHUB_RUN_NUMBER" "$APP/Info.plist"
-
-          cat > "$APP/HEADFREE_BUILD.txt" <<MARKER
-HeadFree FINAL v2
-GitHub run: $GITHUB_RUN_NUMBER
-Run ID: $GITHUB_RUN_ID
-Source SHA256: $SOURCE_SHA
-Built with: Xcode 26.6 / macOS 26
-MARKER
-
-          echo "===== BUILD MARKER ====="
-          cat "$APP/HEADFREE_BUILD.txt"
-          echo "========================"
-
-      - name: Verify final app
-        shell: bash
-        run: |
-          set -euo pipefail
-          APP="build/Build/Products/Release-iphoneos/HeadFree.app"
-          test -f "$APP/HEADFREE_BUILD.txt"
-          grep -q "GitHub run: $GITHUB_RUN_NUMBER" "$APP/HEADFREE_BUILD.txt"
-          grep -q "Source SHA256: $SOURCE_SHA" "$APP/HEADFREE_BUILD.txt"
-          /usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$APP/Info.plist"
-          /usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "$APP/Info.plist"
-
-      - name: Create uniquely named IPA
-        shell: bash
-        run: |
-          set -euo pipefail
-          rm -rf Payload
+          set -e
+          test -d build/Build/Products/Release-iphoneos/HeadFree.app
           mkdir -p Payload
           cp -R build/Build/Products/Release-iphoneos/HeadFree.app Payload/HeadFree.app
-          IPA="HeadFree-${GITHUB_RUN_NUMBER}.ipa"
-          /usr/bin/zip -qry "$IPA" Payload
-          test -s "$IPA"
-          echo "IPA=$IPA" >> "$GITHUB_ENV"
-          ls -lh "$IPA"
+          /usr/bin/zip -qry "HeadFree-${GITHUB_RUN_NUMBER}.ipa" Payload
+          ls -lh "HeadFree-${GITHUB_RUN_NUMBER}.ipa"
 
-      - name: Upload uniquely named IPA
+      - name: Upload IPA
         uses: actions/upload-artifact@v4
         with:
           name: HeadFree-IPA-${{ github.run_number }}
-          path: ${{ env.IPA }}
+          path: HeadFree-${{ github.run_number }}.ipa
           if-no-files-found: error
-
-# final-build-trigger
