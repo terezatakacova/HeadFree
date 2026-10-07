@@ -48,7 +48,7 @@ jobs:
 
           new = '''                    VStack(spacing: 8) {
                         Text("HeadFree")
-                            .font(.system(size: 42, weight: .regular, design: .serif)
+                            .font(.system(size: 42, weight: .regular, design: .serif))
                             .foregroundStyle(text)
 
                         Text("Calm your mind.\nFree your head.")
