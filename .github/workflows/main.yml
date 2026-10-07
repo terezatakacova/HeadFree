@@ -7,7 +7,7 @@ on:
       - 'HeadFree_FINAL_DESIGN_FIXED_v2.zip'
       - 'HeadFree_IconGenerator.swift'
       - 'HeadFree_VectorBranch.swift'
-      - 'HeadFree_IntroAsset.swift'
+      - 'HeadFreeIntroReference.jpg'
       - '.github/workflows/main.yml'
 
 jobs:
@@ -35,21 +35,32 @@ jobs:
           APP_DIR=$(find "$(dirname "$PROJECT")" -type f -name "ContentView.swift" -print -quit | xargs dirname)
           test -f "$APP_DIR/ContentView.swift"
 
+          mkdir -p "$APP_DIR/Assets.xcassets/HeadFreeIntroReference.imageset"
+          cp HeadFreeIntroReference.jpg "$APP_DIR/Assets.xcassets/HeadFreeIntroReference.imageset/HeadFreeIntroReference.jpg"
+          cat > "$APP_DIR/Assets.xcassets/HeadFreeIntroReference.imageset/Contents.json" <<'JSON'
+          {
+            "images" : [
+              {
+                "filename" : "HeadFreeIntroReference.jpg",
+                "idiom" : "universal",
+                "scale" : "1x"
+              }
+            ],
+            "info" : {
+              "author" : "xcode",
+              "version" : 1
+            }
+          }
+          JSON
+
           python3 - "$APP_DIR/ContentView.swift" <<'PY'
           import sys
           from pathlib import Path
 
           p = Path(sys.argv[1])
           s = p.read_text()
-
           intro_start = s.index("struct HFIntroView: View {")
           intro_end = s.index("struct HeadFreeHomeView: View {")
-
-          asset = Path("HeadFree_IntroAsset.swift").read_text()
-          if "let headFreeIntroBase64" not in s:
-              s = s[:intro_start] + asset + "\n\n" + s[intro_start:]
-              intro_start = s.index("struct HFIntroView: View {")
-              intro_end = s.index("struct HeadFreeHomeView: View {")
 
           intro = r'''struct HFIntroView: View {
               let onContinue: () -> Void
@@ -60,39 +71,28 @@ jobs:
                           Color(red: 0.95, green: 0.93, blue: 0.87)
                               .ignoresSafeArea()
 
-                          if let data = Data(base64Encoded: headFreeIntroBase64),
-                             let uiImage = UIImage(data: data) {
-                              Image(uiImage: uiImage)
-                                  .resizable()
-                                  .interpolation(.high)
-                                  .scaledToFill()
-                                  .frame(width: geo.size.width, height: geo.size.height)
-                                  .clipped()
-                          }
+                          Image("HeadFreeIntroReference")
+                              .resizable()
+                              .interpolation(.high)
+                              .scaledToFill()
+                              .frame(width: geo.size.width, height: geo.size.height)
+                              .clipped()
 
-                          VStack {
+                          VStack(spacing: 0) {
+                              Spacer()
                               Spacer()
 
-                              HStack {
-                                  Spacer()
-
-                                  VStack(alignment: .leading, spacing: 8) {
-                                      Text("HeadFree")
-                                          .font(.system(size: 34, weight: .regular, design: .serif))
-                                          .foregroundStyle(Color(red: 0.22, green: 0.22, blue: 0.18))
-
-                                      Text("Calm your mind.\nFree your head.")
-                                          .font(.system(size: 17, weight: .regular, design: .serif))
-                                          .lineSpacing(5)
-                                          .foregroundStyle(Color(red: 0.28, green: 0.27, blue: 0.23))
-                                  }
-                                  .padding(.horizontal, 24)
-                                  .padding(.vertical, 12)
-                                  .background(Color(red: 0.95, green: 0.93, blue: 0.87).opacity(0.94))
-                                  .cornerRadius(8)
-
-                                  Spacer()
+                              VStack(alignment: .leading, spacing: 6) {
+                                  Text("Calm your mind.\nFree your head.")
+                                      .font(.system(size: 17, weight: .regular, design: .serif))
+                                      .lineSpacing(5)
+                                      .foregroundStyle(Color(red: 0.28, green: 0.27, blue: 0.23))
                               }
+                              .frame(maxWidth: .infinity, alignment: .leading)
+                              .padding(.leading, geo.size.width * 0.22)
+                              .padding(.top, 8)
+                              .padding(.bottom, 20)
+                              .background(Color(red: 0.95, green: 0.93, blue: 0.87).opacity(0.97))
 
                               Spacer()
 
@@ -102,7 +102,7 @@ jobs:
                                           .font(.system(size: 16, weight: .medium))
                                       Spacer()
                                       Image(systemName: "arrow.right")
-                                          .font(.system(size: 16))
+                                          .font(.system(size: 18))
                                   }
                                   .foregroundStyle(.white)
                                   .padding(.horizontal, 20)
@@ -110,7 +110,7 @@ jobs:
                                   .background(Color(red: 0.43, green: 0.51, blue: 0.36), in: Capsule())
                               }
                               .buttonStyle(.plain)
-                              .padding(.bottom, max(28, geo.safeAreaInsets.bottom + 20))
+                              .padding(.bottom, max(24, geo.safeAreaInsets.bottom + 12))
                           }
                       }
                   }
@@ -128,9 +128,11 @@ jobs:
 
           swift HeadFree_IconGenerator.swift "$APP_DIR/Assets.xcassets/AppIcon.appiconset/AppIcon.png"
 
+          grep -q 'Image("HeadFreeIntroReference")' "$APP_DIR/ContentView.swift"
           grep -q 'Calm your mind.' "$APP_DIR/ContentView.swift"
           grep -q 'com.terezatakacova.HeadFree5' "$PROJECT/project.pbxproj"
           grep -q 'INFOPLIST_KEY_UIRequiresFullScreen = YES;' "$PROJECT/project.pbxproj"
+          test -f "$APP_DIR/Assets.xcassets/HeadFreeIntroReference.imageset/HeadFreeIntroReference.jpg"
           test -f "$APP_DIR/Assets.xcassets/AppIcon.appiconset/AppIcon.png"
 
           echo "PROJECT=$PROJECT" >> "$GITHUB_ENV"
@@ -148,7 +150,7 @@ jobs:
           test -d build/Build/Products/Release-iphoneos/HeadFree.app
           mkdir -p Payload
           cp -R build/Build/Products/Release-iphoneos/HeadFree.app Payload/HeadFree.app
-          /usr/bin/zip -qry "HeadFree-${GITHUB_RUN_NUMBER}.ipa" Payload
+          /usr/bin/zip -qry "HeadFree-${{ github.run_number }}.ipa" Payload
 
       - name: Upload IPA
         uses: actions/upload-artifact@v4
