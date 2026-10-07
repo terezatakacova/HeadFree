@@ -36,8 +36,76 @@ jobs:
 
           perl -0pi -e 's/                if let data = Data\(base64Encoded: hfReferenceBranchBase64\),.*?                }\n\n/                HFBotanicalBranch()\n                    .frame(width: min(235, geo.size.width * 0.48), height: min(430, geo.size.height * 0.52))\n                    .opacity(0.78)\n                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)\n                    .padding(.leading, -8)\n                    .padding(.top, 34)\n\n/s' "$APP_DIR/ContentView.swift"
 
-          awk '/^struct HFEditingTask: Identifiable \{/{system("cat HeadFree_VectorBranch.swift")} {print}' "$APP_DIR/ContentView.swift" > "$APP_DIR/ContentView.swift.tmp"
-          mv "$APP_DIR/ContentView.swift.tmp" "$APP_DIR/ContentView.swift"
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path("$APP_DIR/ContentView.swift")
+          s = p.read_text()
+          intro_start = s.index("struct HFIntroView: View {")
+          intro_end = s.index("struct HeadFreeHomeView: View {")
+          intro = s[intro_start:intro_end]
+
+          branch = '''struct HFBotanicalBranch: View {
+              var body: some View {
+                  Group {
+                      if let data = Data(base64Encoded: hfReferenceBranchBase64),
+                         let image = UIImage(data: data) {
+                          Image(uiImage: image)
+                              .resizable()
+                              .interpolation(.high)
+                              .scaledToFit()
+                      }
+                  }
+                  .allowsHitTesting(false)
+              }
+          }
+
+          '''
+          if "struct HFBotanicalBranch: View" not in s:
+              s = s.replace("struct HeadFreeHomeView: View {", branch + "struct HeadFreeHomeView: View {", 1)
+
+          if 'Text("MENEJ V HLAVE.' not in intro:
+              intro = intro.replace(
+                  'Text("HeadFree")',
+                  '''VStack(spacing: 8) {
+                      Text("HeadFree")
+                          .font(
+                              .system(
+                                  size: 32,
+                                  weight: .regular,
+                                  design: .serif
+                              )
+                          )
+                          .foregroundStyle(
+                              Color(
+                                  red: 0.245,
+                                  green: 0.255,
+                                  blue: 0.225
+                              )
+                          )
+
+                      Text("MENEJ V HLAVE.\\nVIAC V ŽIVOTE.")
+                          .font(
+                              .system(
+                                  size: 15,
+                                  weight: .medium,
+                                  design: .serif
+                              )
+                          )
+                          .tracking(1.4)
+                          .multilineTextAlignment(.center)
+                          .foregroundStyle(
+                              Color(
+                                  red: 0.470,
+                                  green: 0.465,
+                                  blue: 0.405
+                              )
+                          )
+                  }''',
+                  1
+              )
+              s = s[:intro_start] + intro + s[intro_end:]
+          p.write_text(s)
+          PY
 
           sed -i '' 's/INFOPLIST_KEY_UIRequiresFullScreen = NO;/INFOPLIST_KEY_UIRequiresFullScreen = YES;/g' "$PROJECT/project.pbxproj"
           sed -i '' 's/com.terezatakacova.HeadFree/com.terezatakacova.HeadFree5/g' "$PROJECT/project.pbxproj"
@@ -45,6 +113,7 @@ jobs:
           swift HeadFree_IconGenerator.swift "$APP_DIR/Assets.xcassets/AppIcon.appiconset/AppIcon.png"
 
           grep -q 'HFBotanicalBranch' "$APP_DIR/ContentView.swift"
+          grep -q 'MENEJ V HLAVE.' "$APP_DIR/ContentView.swift"
           grep -q 'com.terezatakacova.HeadFree5' "$PROJECT/project.pbxproj"
           grep -q 'INFOPLIST_KEY_UIRequiresFullScreen = YES;' "$PROJECT/project.pbxproj"
           test -f "$APP_DIR/Assets.xcassets/AppIcon.appiconset/AppIcon.png"
