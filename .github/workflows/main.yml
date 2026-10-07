@@ -20,20 +20,44 @@ jobs:
       - name: Unzip and prepare project
         shell: bash
         run: |
-          unzip -q HeadFree_FINAL_DESIGN_FIXED.zip -d extracted
+          unzip -q HeadFree_FINAL_DESIGN_FIXED_v2.zip -d extracted
+
           PROJECT=$(find extracted -type d -name "*.xcodeproj" -print -quit)
-          if [ -z "$PROJECT" ] || [ ! -f "$PROJECT/project.pbxproj" ]; then echo "ERROR: Xcode project not found"; exit 1; fi
+          if [ -z "$PROJECT" ] || [ ! -f "$PROJECT/project.pbxproj" ]; then
+            echo "ERROR: Xcode project not found"
+            exit 1
+          fi
+
           APP_DIR=$(find "$(dirname "$PROJECT")" -type f -name "ContentView.swift" -print -quit | xargs dirname)
-          if [ -z "$APP_DIR" ] || [ ! -d "$APP_DIR" ]; then echo "ERROR: App source folder not found"; exit 1; fi
+          if [ -z "$APP_DIR" ] || [ ! -d "$APP_DIR" ]; then
+            echo "ERROR: App source folder not found"
+            exit 1
+          fi
+
           APP_FILE="$APP_DIR/HeadFreeApp.swift"
-          if [ ! -f "$APP_FILE" ]; then SOURCE_APP=$(find "$APP_DIR" -type f -name "*App.swift" -print -quit); cp "$SOURCE_APP" "$APP_FILE"; fi
+          if [ ! -f "$APP_FILE" ]; then
+            SOURCE_APP=$(find "$APP_DIR" -type f -name "*App.swift" -print -quit)
+            if [ -z "$SOURCE_APP" ]; then
+              echo "ERROR: No App.swift file found"
+              exit 1
+            fi
+            cp "$SOURCE_APP" "$APP_FILE"
+          fi
+
           sed -i '' 's/struct HeadFeeApp: App/struct HeadFreeApp: App/' "$APP_FILE"
           echo "PROJECT=$PROJECT" >> "$GITHUB_ENV"
 
       - name: Build iOS app
         shell: bash
         run: |
-          xcodebuild -project "$PROJECT" -scheme HeadFree -sdk iphoneos -configuration Release -derivedDataPath build CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO
+          xcodebuild \
+            -project "$PROJECT" \
+            -scheme HeadFree \
+            -sdk iphoneos \
+            -configuration Release \
+            -derivedDataPath build \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO
 
       - name: Create IPA
         shell: bash
@@ -46,4 +70,6 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: HeadFree-IPA
+          path: HeadFree.ipa
+
           path: HeadFree.ipa
