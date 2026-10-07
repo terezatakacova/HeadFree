@@ -18,54 +18,45 @@ jobs:
       - name: Select Xcode 26.6
         shell: bash
         run: |
+          set -euo pipefail
           sudo xcode-select -s /Applications/Xcode_26.6.app/Contents/Developer
           xcodebuild -version
 
-      - name: Verify final project ZIP
+      - name: Verify and extract final project
         shell: bash
         run: |
-          test -f HeadFree_FINAL_DESIGN_FIXED_v2.zip
-          echo "Using: HeadFree_FINAL_DESIGN_FIXED_v2.zip"
-          ls -lh HeadFree_FINAL_DESIGN_FIXED_v2.zip
+          set -euo pipefail
 
-      - name: Unzip final project
-        shell: bash
-        run: |
+          ZIP="HeadFree_FINAL_DESIGN_FIXED_v2.zip"
+          test -f "$ZIP"
+
           rm -rf extracted
-          unzip -q HeadFree_FINAL_DESIGN_FIXED_v2.zip -d extracted
+          unzip -q "$ZIP" -d extracted
 
           PROJECT=$(find extracted -type d -name "*.xcodeproj" -print -quit)
-          if [ -z "$PROJECT" ]; then
-            echo "ERROR: Xcode project not found in FINAL v2 ZIP"
-            find extracted -maxdepth 4 -type f | head -100
-            exit 1
-          fi
+          test -n "$PROJECT"
+          test -f "$PROJECT/project.pbxproj"
 
-          if [ ! -f "$PROJECT/project.pbxproj" ]; then
-            echo "ERROR: project.pbxproj not found"
-            exit 1
-          fi
-
-          echo "PROJECT=$PROJECT" >> "$GITHUB_ENV"
-          echo "Using project: $PROJECT"
-
-      - name: Verify final source and modern screen settings
-        shell: bash
-        run: |
-          APP_DIR=$(dirname "$(find "$(dirname "$PROJECT")" -type f -name "ContentView.swift" -print -quit)")
+          APP_DIR=$(find "$(dirname "$PROJECT")" -type f -name "ContentView.swift" -print -quit | xargs dirname)
+          test -n "$APP_DIR"
           test -f "$APP_DIR/ContentView.swift"
           test -f "$APP_DIR/HeadFreeApp.swift"
 
-          grep -q 'headFreeIntroBase64' "$APP_DIR/ContentView.swift"
+          grep -q 'struct HeadFreeApp: App' "$APP_DIR/HeadFreeApp.swift"
+          grep -q 'GENERATE_INFOPLIST_FILE = YES;' "$PROJECT/project.pbxproj"
           grep -q 'INFOPLIST_KEY_UILaunchScreen_Generation = YES;' "$PROJECT/project.pbxproj"
           grep -q 'INFOPLIST_KEY_UIRequiresFullScreen = NO;' "$PROJECT/project.pbxproj"
 
-          echo "Final source/settings verified."
+          echo "PROJECT=$PROJECT" >> "$GITHUB_ENV"
+          echo "APP_DIR=$APP_DIR" >> "$GITHUB_ENV"
+          echo "Final project verified: $PROJECT"
 
-      - name: Build iOS app with Xcode 26
+      - name: Build iOS app
         shell: bash
         run: |
+          set -euo pipefail
           rm -rf build Payload HeadFree.ipa
+
           xcodebuild \
             -project "$PROJECT" \
             -scheme HeadFree \
@@ -74,15 +65,26 @@ jobs:
             -derivedDataPath build \
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGNING_REQUIRED=NO \
-            INFOPLIST_KEY_UILaunchScreen_Generation=YES
+            CODE_SIGN_IDENTITY=""
+
+      - name: Verify built app
+        shell: bash
+        run: |
+          set -euo pipefail
+          APP="build/Build/Products/Release-iphoneos/HeadFree.app"
+          test -d "$APP"
+          test -f "$APP/Info.plist"
+          /usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$APP/Info.plist"
+          echo "HeadFree.app successfully built."
 
       - name: Create IPA
         shell: bash
         run: |
-          test -d build/Build/Products/Release-iphoneos/HeadFree.app
+          set -euo pipefail
           mkdir -p Payload
-          cp -R build/Build/Products/Release-iphoneos/HeadFree.app Payload/
+          cp -R build/Build/Products/Release-iphoneos/HeadFree.app Payload/HeadFree.app
           /usr/bin/zip -qry HeadFree.ipa Payload
+          test -s HeadFree.ipa
           ls -lh HeadFree.ipa
 
       - name: Upload IPA
