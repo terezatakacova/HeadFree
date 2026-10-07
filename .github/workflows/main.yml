@@ -35,17 +35,11 @@ jobs:
           APP_DIR=$(find "$(dirname "$PROJECT")" -type f -name "ContentView.swift" -print -quit | xargs dirname)
           test -f "$APP_DIR/ContentView.swift"
 
-          sed -i '' '184,193c\
-                HFBotanicalBranch()\
-                    .frame(width: min(235, geo.size.width * 0.48),\
-                           height: min(430, geo.size.height * 0.52))\
-                    .opacity(0.78)\
-                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)\
-                    .padding(.leading, -8)\
-                    .padding(.top, 34)' "$APP_DIR/ContentView.swift"
+          perl -0pi -e 's/                if let data = Data\\(base64Encoded: hfReferenceBranchBase64\\),.*?                }\\n\\n/                HFBotanicalBranch()\\n                    .frame(width: min(235, geo.size.width * 0.48), height: min(430, geo.size.height * 0.52))\\n                    .opacity(0.78)\\n                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)\\n                    .padding(.leading, -8)\\n                    .padding(.top, 34)\\n\\n/s' "$APP_DIR/ContentView.swift"
 
-          sed -i '' '/^struct HFEditingTask: Identifiable:$/r HeadFree_VectorBranch.swift' "$APP_DIR/ContentView.swift"
-          sed -i '' '/^struct HFEditingTask: Identifiable {$/r HeadFree_VectorBranch.swift' "$APP_DIR/ContentView.swift"
+          awk '/^struct HFEditingTask: Identifiable \\{/{system("cat HeadFree_VectorBranch.swift")} {print}' "$APP_DIR/ContentView.swift" > "$APP_DIR/ContentView.swift.tmp"
+          mv "$APP_DIR/ContentView.swift.tmp" "$APP_DIR/ContentView.swift"
+
 
           sed -i '' 's/com.terezatakacova.HeadFree/com.terezatakacova.HeadFree3/g' "$PROJECT/project.pbxproj"
           swift HeadFree_IconGenerator.swift "$APP_DIR/Assets.xcassets/AppIcon.appiconset/AppIcon.png"
