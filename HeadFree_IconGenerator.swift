@@ -61,7 +61,7 @@ leaf(CGPoint(x: 665, y: 355), 185, 300, 0.55, olive)
 leaf(CGPoint(x: 525, y: 690), 170, 260, 0.95, oliveLight)
 
 let font = CTFontCreateWithName("Georgia" as CFString, 92, nil)
-let attrs: [NSAttributedString.Key: Any] = [.font: font, .foregroundColor: text]
+let attrs: [NSAttributedString.Key: Any] = [NSAttributedString.Key(kCTFontAttributeName as String): font, NSAttributedString.Key(kCTForegroundColorAttributeName as String): text]
 let title = NSAttributedString(string: "HeadFree", attributes: attrs)
 let line = CTLineCreateWithAttributedString(title)
 let bounds = CTLineGetBoundsWithOptions(line, [])
