@@ -35,7 +35,7 @@ jobs:
           APP_DIR=$(find "$(dirname "$PROJECT")" -type f -name "ContentView.swift" -print -quit | xargs dirname)
           test -f "$APP_DIR/ContentView.swift"
 
-          perl -0pi -e 's/                if let data = Data\(base64Encoded: hfReferenceBranchBase64\),.*?                }\n\n/                HFBotanicalBranch()\n                    .frame(width: min(245, geo.size.width * 0.50), height: min(470, geo.size.height * 0.56))\n                    .opacity(0.88)\n                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)\n                    .padding(.leading, -4)\n                    .padding(.top, 24)\n\n/s' "$APP_DIR/ContentView.swift"
+          perl -0pi -e 's/                if let data = Data\(base64Encoded: hfReferenceBranchBase64\),.*?                }\n\n/                HFIntroBotanicalBranch()\n                    .frame(width: min(245, geo.size.width * 0.50), height: min(470, geo.size.height * 0.56))\n                    .opacity(0.88)\n                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)\n                    .padding(.leading, -4)\n                    .padding(.top, 24)\n\n/s' "$APP_DIR/ContentView.swift"
 
           perl -0pi -e 's/\.font\(\.system\(size: 42, weight: \.regular, design: \.serif\)\)/.font(.custom("Georgia", size: 42))/g' "$APP_DIR/ContentView.swift"
 
@@ -45,7 +45,7 @@ jobs:
           sed -i '' 's/com.terezatakacova.HeadFree/com.terezatakacova.HeadFree4/g' "$PROJECT/project.pbxproj"
           swift HeadFree_IconGenerator.swift "$APP_DIR/Assets.xcassets/AppIcon.appiconset/AppIcon.png"
 
-          grep -q 'HFBotanicalBranch' "$APP_DIR/ContentView.swift"
+          grep -q 'HFIntroBotanicalBranch' "$APP_DIR/ContentView.swift"
           grep -q 'com.terezatakacova.HeadFree4' "$PROJECT/project.pbxproj"
           test -f "$APP_DIR/Assets.xcassets/AppIcon.appiconset/AppIcon.png"
 
