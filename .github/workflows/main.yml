@@ -41,27 +41,78 @@ jobs:
           p = Path(sys.argv[1])
           s = p.read_text()
 
-          old = '''                    Text("HeadFree")
-                        .font(.system(size: 42, weight: .regular, design: .serif))
-                        .foregroundStyle(text)
-                        .padding(.bottom, 18)'''
+          intro_start = s.index("struct HFIntroView: View {")
+          intro_end = s.index("struct HeadFreeHomeView: View {")
 
-          new = '''                    VStack(spacing: 8) {
-                        Text("HeadFree")
-                            .font(.system(size: 42, weight: .regular, design: .serif))
-                            .foregroundStyle(text)
+          intro = r'''struct HFIntroView: View {
+              let onContinue: () -> Void
 
-                        Text("Calm your mind.\nFree your head.")
-                            .font(.system(size: 17, weight: .regular, design: .serif))
-                            .foregroundStyle(text.opacity(0.72))
-                            .multilineTextAlignment(.leading)
-                    }
-                    .padding(.bottom, 18)'''
+              var body: some View {
+                  GeometryReader { geo in
+                      ZStack {
+                          Color(red: 0.95, green: 0.93, blue: 0.87)
+                              .ignoresSafeArea()
 
-          if old not in s:
-              raise SystemExit("Original intro text block not found")
+                          if let data = Data(base64Encoded: headFreeIntroBase64),
+                             let uiImage = UIImage(data: data) {
+                              Image(uiImage: uiImage)
+                                  .resizable()
+                                  .interpolation(.high)
+                                  .scaledToFill()
+                                  .frame(width: geo.size.width, height: geo.size.height)
+                                  .clipped()
+                          }
 
-          s = s.replace(old, new, 1)
+                          VStack {
+                              Spacer()
+
+                              HStack {
+                                  Spacer()
+
+                                  VStack(alignment: .leading, spacing: 8) {
+                                      Text("HeadFree")
+                                          .font(.system(size: 34, weight: .regular, design: .serif))
+                                          .foregroundStyle(Color(red: 0.22, green: 0.22, blue: 0.18))
+
+                                      Text("Calm your mind.\\nFree your head.")
+                                          .font(.system(size: 17, weight: .regular, design: .serif))
+                                          .lineSpacing(5)
+                                          .foregroundStyle(Color(red: 0.28, green: 0.27, blue: 0.23))
+                                  }
+                                  .padding(.horizontal, 24)
+                                  .padding(.vertical, 12)
+                                  .background(Color(red: 0.95, green: 0.93, blue: 0.87).opacity(0.94))
+                                  .cornerRadius(8)
+
+                                  Spacer()
+                              }
+
+                              Spacer()
+
+                              Button(action: onContinue) {
+                                  HStack {
+                                      Text("Pokračovať")
+                                          .font(.system(size: 16, weight: .medium))
+                                      Spacer()
+                                      Image(systemName: "arrow.right")
+                                          .font(.system(size: 16))
+                                  }
+                                  .foregroundStyle(.white)
+                                  .padding(.horizontal, 20)
+                                  .frame(width: min(250, geo.size.width * 0.68), height: 54)
+                                  .background(Color(red: 0.43, green: 0.51, blue: 0.36), in: Capsule())
+                              }
+                              .buttonStyle(.plain)
+                              .padding(.bottom, max(28, geo.safeAreaInsets.bottom + 20))
+                          }
+                      }
+                  }
+                  .ignoresSafeArea()
+              }
+          }
+
+          '''
+          s = s[:intro_start] + intro + s[intro_end:]
           p.write_text(s)
           PY
 
