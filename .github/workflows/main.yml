@@ -24,7 +24,7 @@ jobs:
           sudo xcode-select -s /Applications/Xcode_26.6.app/Contents/Developer
           xcodebuild -version
 
-      - name: Prepare and fix final project
+      - name: Prepare final project
         shell: bash
         run: |
           set -e
@@ -35,17 +35,18 @@ jobs:
           APP_DIR=$(find "$(dirname "$PROJECT")" -type f -name "ContentView.swift" -print -quit | xargs dirname)
           test -f "$APP_DIR/ContentView.swift"
 
-          perl -0pi -e 's/                if let data = Data\\(base64Encoded: hfReferenceBranchBase64\\),.*?                }\\n\\n/                HFBotanicalBranch()\\n                    .frame(width: min(235, geo.size.width * 0.48), height: min(430, geo.size.height * 0.52))\\n                    .opacity(0.78)\\n                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)\\n                    .padding(.leading, -8)\\n                    .padding(.top, 34)\\n\\n/s' "$APP_DIR/ContentView.swift"
+          perl -0pi -e 's/                if let data = Data\(base64Encoded: hfReferenceBranchBase64\),.*?                }\n\n/                HFBotanicalBranch()\n                    .frame(width: min(245, geo.size.width * 0.50), height: min(470, geo.size.height * 0.56))\n                    .opacity(0.88)\n                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)\n                    .padding(.leading, -4)\n                    .padding(.top, 24)\n\n/s' "$APP_DIR/ContentView.swift"
 
-          awk '/^struct HFEditingTask: Identifiable \\{/{system("cat HeadFree_VectorBranch.swift")} {print}' "$APP_DIR/ContentView.swift" > "$APP_DIR/ContentView.swift.tmp"
+          perl -0pi -e 's/\.font\(\.system\(size: 42, weight: \.regular, design: \.serif\)\)/.font(.custom("Georgia", size: 42))/g' "$APP_DIR/ContentView.swift"
+
+          awk '/^struct HFEditingTask: Identifiable \{/{system("cat HeadFree_VectorBranch.swift")} {print}' "$APP_DIR/ContentView.swift" > "$APP_DIR/ContentView.swift.tmp"
           mv "$APP_DIR/ContentView.swift.tmp" "$APP_DIR/ContentView.swift"
 
-
-          sed -i '' 's/com.terezatakacova.HeadFree/com.terezatakacova.HeadFree3/g' "$PROJECT/project.pbxproj"
+          sed -i '' 's/com.terezatakacova.HeadFree/com.terezatakacova.HeadFree4/g' "$PROJECT/project.pbxproj"
           swift HeadFree_IconGenerator.swift "$APP_DIR/Assets.xcassets/AppIcon.appiconset/AppIcon.png"
 
           grep -q 'HFBotanicalBranch' "$APP_DIR/ContentView.swift"
-          grep -q 'com.terezatakacova.HeadFree3' "$PROJECT/project.pbxproj"
+          grep -q 'com.terezatakacova.HeadFree4' "$PROJECT/project.pbxproj"
           test -f "$APP_DIR/Assets.xcassets/AppIcon.appiconset/AppIcon.png"
 
           echo "PROJECT=$PROJECT" >> "$GITHUB_ENV"
@@ -54,7 +55,7 @@ jobs:
         shell: bash
         run: |
           set -e
-          xcodebuild             -project "$PROJECT"             -scheme HeadFree             -sdk iphoneos             -configuration Release             -derivedDataPath build             CODE_SIGNING_ALLOWED=NO             CODE_SIGNING_REQUIRED=NO             CODE_SIGN_IDENTITY=""
+          xcodebuild -project "$PROJECT" -scheme HeadFree -sdk iphoneos -configuration Release -derivedDataPath build CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY=""
 
       - name: Create IPA
         shell: bash
