@@ -121,3 +121,5 @@ MARKER
           name: HeadFree-IPA-${{ github.run_number }}
           path: ${{ env.IPA }}
           if-no-files-found: error
+
+# final-build-trigger
