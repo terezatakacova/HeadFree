@@ -65,7 +65,7 @@ jobs:
                               )
                           )
 
-                      Text("MENEJ V HLAVE.\\nVIAC V ŽIVOTE.")
+                      Text("Calm your mind.\\nFree your head.")
                           .font(
                               .system(
                                   size: 15,
