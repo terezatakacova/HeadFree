@@ -1,4 +1,4 @@
-// MARK: - VECTOR BOTANICAL BRANCH
+// MARK: - FINAL INTRO BRANCH
 
 private struct HFLeaf: View {
     let color: Color
@@ -7,20 +7,24 @@ private struct HFLeaf: View {
 
     var body: some View {
         ZStack {
-            Path { path in
-                path.move(to: CGPoint(x: 35, y: 108))
-                path.addQuadCurve(to: CGPoint(x: 34, y: 8), control: CGPoint(x: -4, y: 48))
-                path.addQuadCurve(to: CGPoint(x: 35, y: 108), control: CGPoint(x: 76, y: 55))
+            Path { p in
+                p.move(to: CGPoint(x: 36, y: 112))
+                p.addCurve(to: CGPoint(x: 32, y: 8),
+                           control1: CGPoint(x: -2, y: 65),
+                           control2: CGPoint(x: 4, y: 22))
+                p.addCurve(to: CGPoint(x: 36, y: 112),
+                           control1: CGPoint(x: 72, y: 72),
+                           control2: CGPoint(x: 70, y: 32))
             }
-            .fill(color)
+            .fill(color.opacity(0.88))
 
-            Path { path in
-                path.move(to: CGPoint(x: 35, y: 105))
-                path.addLine(to: CGPoint(x: 35, y: 12))
+            Path { p in
+                p.move(to: CGPoint(x: 36, y: 108))
+                p.addLine(to: CGPoint(x: 33, y: 13))
             }
-            .stroke(hfGold.opacity(0.72), lineWidth: 1.4)
+            .stroke(hfGreen.opacity(0.55), lineWidth: 1.2)
         }
-        .frame(width: 70, height: 110)
+        .frame(width: 72, height: 116)
         .scaleEffect(scale)
         .rotationEffect(.degrees(rotation))
     }
@@ -29,23 +33,24 @@ private struct HFLeaf: View {
 struct HFBotanicalBranch: View {
     var body: some View {
         ZStack {
-            Circle()
-                .trim(from: 0.08, to: 0.82)
-                .stroke(hfGold.opacity(0.75), lineWidth: 2)
-                .rotationEffect(.degrees(18))
-                .frame(width: 150, height: 150)
+            Path { p in
+                p.move(to: CGPoint(x: 82, y: 430))
+                p.addCurve(to: CGPoint(x: 112, y: 250),
+                           control1: CGPoint(x: 80, y: 350),
+                           control2: CGPoint(x: 96, y: 290))
+                p.addCurve(to: CGPoint(x: 132, y: 72),
+                           control1: CGPoint(x: 112, y: 190),
+                           control2: CGPoint(x: 126, y: 120))
+            }
+            .stroke(hfGreen.opacity(0.58), style: StrokeStyle(lineWidth: 4, lineCap: .round))
 
-            Capsule()
-                .fill(hfGold.opacity(0.9))
-                .frame(width: 5, height: 220)
-                .rotationEffect(.degrees(-36))
-                .offset(x: -10, y: 24)
-
-            HFLeaf(color: hfGreenLight.opacity(0.95), rotation: -58, scale: 0.92).offset(x: -46, y: 24)
-            HFLeaf(color: hfGreen.opacity(0.82), rotation: -28, scale: 0.98).offset(x: -18, y: -10)
-            HFLeaf(color: hfGreenLight.opacity(0.9), rotation: 12, scale: 0.9).offset(x: 18, y: 16)
-            HFLeaf(color: hfGreen.opacity(0.9), rotation: 38, scale: 1.0).offset(x: 30, y: -46)
-            HFLeaf(color: hfGreenLight.opacity(0.82), rotation: 64, scale: 0.82).offset(x: 2, y: -82)
+            HFLeaf(color: hfGreenLight, rotation: -62, scale: 1.10).offset(x: 32, y: 118)
+            HFLeaf(color: hfGreen, rotation: -38, scale: 1.02).offset(x: 20, y: 200)
+            HFLeaf(color: hfGreenLight, rotation: -18, scale: 0.96).offset(x: 35, y: 286)
+            HFLeaf(color: hfGreen, rotation: 18, scale: 1.02).offset(x: 95, y: 170)
+            HFLeaf(color: hfGreenLight, rotation: 34, scale: 0.92).offset(x: 112, y: 250)
+            HFLeaf(color: hfGreen, rotation: 48, scale: 0.88).offset(x: 126, y: 330)
+            HFLeaf(color: hfGreenLight, rotation: 70, scale: 0.78).offset(x: 96, y: 88)
         }
         .allowsHitTesting(false)
     }
