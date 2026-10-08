@@ -126,7 +126,7 @@ jobs:
               }
           }
 
-
+          s = s[:intro_start] + intro + s[intro_end:]
           p.write_text(s)
           PY
 
