@@ -62,7 +62,7 @@ jobs:
           intro_start = s.index("struct HFIntroView: View {")
           intro_end = s.index("struct HeadFreeHomeView: View {")
 
-                    intro = r'''struct HFIntroView: View {
+          intro = r'''struct HFIntroView: View {
               let onContinue: () -> Void
 
               private let paper = Color(red: 0.95, green: 0.93, blue: 0.87)
