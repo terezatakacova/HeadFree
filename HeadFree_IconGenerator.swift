@@ -7,10 +7,10 @@ let colorSpace = CGColorSpaceCreateDeviceRGB()
 let ctx = CGContext(data: nil, width: size, height: size, bitsPerComponent: 8, bytesPerRow: size * 4, space: colorSpace, bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)!
 
 let cream = CGColor(red: 0.955, green: 0.935, blue: 0.885, alpha: 1)
-let olive = CGColor(red: 0.43, green: 0.51, blue: 0.355, alpha: 1)
-let oliveLight = CGColor(red: 0.60, green: 0.66, blue: 0.50, alpha: 1)
-let olivePale = CGColor(red: 0.72, green: 0.75, blue: 0.63, alpha: 1)
-let line = CGColor(red: 0.54, green: 0.50, blue: 0.38, alpha: 1)
+let olive = CGColor(red: 0.39, green: 0.48, blue: 0.33, alpha: 1)
+let oliveLight = CGColor(red: 0.55, green: 0.63, blue: 0.46, alpha: 1)
+let olivePale = CGColor(red: 0.68, green: 0.72, blue: 0.57, alpha: 1)
+let line = CGColor(red: 0.36, green: 0.35, blue: 0.28, alpha: 1)
 
 ctx.setFillColor(cream)
 ctx.addPath(CGPath(roundedRect: CGRect(x: 4, y: 4, width: 1016, height: 1016), cornerWidth: 115, cornerHeight: 115, transform: nil))
