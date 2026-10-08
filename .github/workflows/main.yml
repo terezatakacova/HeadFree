@@ -87,13 +87,6 @@ jobs:
                                   .foregroundStyle(Color(red: 0.17, green: 0.16, blue: 0.13))
                                   .padding(.top, 18)
 
-                              Text("Všetko, čo ti beží v hlave,\nmôže ísť von.")
-                                  .font(.system(size: 20, weight: .regular, design: .serif))
-                                  .multilineTextAlignment(.center)
-                                  .lineSpacing(6)
-                                  .foregroundStyle(Color(red: 0.34, green: 0.33, blue: 0.29))
-                                  .padding(.top, 14)
-
                               Spacer()
 
                               Text("Calm your mind.\nFree your head.")
