@@ -352,6 +352,8 @@ jobs:
                   }
               }
           }'''
+          p.write_text(s[:a] + new + s[b+len("// MARK: - SHOPPING"):])
+          PY
 
           python3 - "$APP_DIR/ContentView.swift" <<'PERSIST'
           import sys
