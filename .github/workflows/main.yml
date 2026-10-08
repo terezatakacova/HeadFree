@@ -355,49 +355,7 @@ jobs:
           p.write_text(s[:a] + new + s[b+len("// MARK: - SHOPPING"):])
           PY
 
-          python3 - "$APP_DIR/ContentView.swift" <<'PERSIST'
-          import sys
-          from pathlib import Path
-          p=Path(sys.argv[1]); s=p.read_text()
-          old=r'''private func storedArray(
-              _ key: String
-          ) -> [String] {
-
-              guard
-                  let value =
-                      UserDefaults.standard.string(
-                          forKey: key
-                      ),
-                  !value.isEmpty
-              else {
-                  return []
-              }
-
-              return value.components(
-                  separatedBy: "|||"
-              )
-          }'''
-          new=r'''private func storedArray(
-              _ key: String
-          ) -> [String] {
-              let defaults = UserDefaults.standard
-
-              if let values = defaults.array(forKey: key) as? [String] {
-                  return values
-              }
-
-              if let value = defaults.string(forKey: key), !value.isEmpty {
-                  return value.components(separatedBy: "|||")
-              }
-
-              return []
-          }'''
-          if old not in s:
-              raise SystemExit("storedArray block not found")
-          p.write_text(s.replace(old,new,1))
-          PERSIST
-
-          curl -fsSL "https://raw.githubusercontent.com/terezatakacova/HeadFree/main/HeadFree_AppIcon_FINAL.jpg" -o /tmp/HeadFree_AppIcon_FINAL.jpg
+          python3 -c 'import sys; from pathlib import Path; p=Path(sys.argv[1]); s=p.read_text(); a=s.index("private func storedArray("); b=s.index("\n}",a)+2; new="""private func storedArray(_ key: String) -> [String] {\n    let defaults = UserDefaults.standard\n    if let values = defaults.array(forKey: key) as? [String] { return values }\n    if let value = defaults.string(forKey: key), !value.isEmpty { return value.components(separatedBy: "|||") }\n    return []\n}"""; p.write_text(s[:a]+new+s[b:])' "$APP_DIR/ContentView.swift"\n\n          curl -fsSL "https://raw.githubusercontent.com/terezatakacova/HeadFree/main/HeadFree_AppIcon_FINAL.jpg" -o /tmp/HeadFree_AppIcon_FINAL.jpg
           sips -s format png -z 1024 1024 /tmp/HeadFree_AppIcon_FINAL.jpg --out "$APP_DIR/Assets.xcassets/AppIcon.appiconset/AppIcon.png" >/dev/null
           cp "$APP_DIR/Assets.xcassets/AppIcon.appiconset/AppIcon.png" "$APP_DIR/Assets.xcassets/HeadFreeIntroIcon.imageset/HeadFreeIntroIcon.png"
 
