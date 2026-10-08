@@ -9,6 +9,7 @@ on:
       - 'HeadFree_IconGenerator.swift'
       - 'HeadFree_VectorBranch.swift'
       - 'HeadFreeIntroReference.jpg'
+      - 'HeadFree_AppIcon_FINAL.jpg'
       - '.github/workflows/main.yml'
 
 jobs:
@@ -253,7 +254,8 @@ jobs:
           p.write_text(s.replace(old,new,1))
           PERSIST
 
-          swift HeadFree_IconGenerator.swift "$APP_DIR/Assets.xcassets/AppIcon.appiconset/AppIcon.png"
+          curl -fsSL "https://raw.githubusercontent.com/terezatakacova/HeadFree/main/HeadFree_AppIcon_FINAL.jpg" -o /tmp/HeadFree_AppIcon_FINAL.jpg
+          sips -s format png -z 1024 1024 /tmp/HeadFree_AppIcon_FINAL.jpg --out "$APP_DIR/Assets.xcassets/AppIcon.appiconset/AppIcon.png" >/dev/null
           cp "$APP_DIR/Assets.xcassets/AppIcon.appiconset/AppIcon.png" "$APP_DIR/Assets.xcassets/HeadFreeIntroIcon.imageset/HeadFreeIntroIcon.png"
 
           grep -q 'Image("HeadFreeIntroIcon")' "$APP_DIR/ContentView.swift"
