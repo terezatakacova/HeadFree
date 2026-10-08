@@ -163,8 +163,8 @@ jobs:
                           }
                       }
                   }
-                  .sheet(item: $editingExpense) { expense in
-                      HFExpenseEditView(expense: expense, onSave: { value in
+                  .sheet(isPresented: Binding(get: { editingExpense != nil }, set: { if !$0 { editingExpense = nil } })) {
+                      HFExpenseEditView(expense: editingExpense ?? "", onSave: { value in
                           if let i = expenses.firstIndex(of: expense) { expenses[i] = value; UserDefaults.standard.set(expenses, forKey: "plannedExpenses") }
                       }, onDelete: {
                           expenses.removeAll { $0 == expense }; UserDefaults.standard.set(expenses, forKey: "plannedExpenses")
