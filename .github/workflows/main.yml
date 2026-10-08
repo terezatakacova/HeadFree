@@ -212,6 +212,147 @@ jobs:
           p.write_text(s[:a]+new+s[b+len("// MARK: - SIMPLE ADD"):])
           PYEXP
 
+          python3 - "$APP_DIR/ContentView.swift" <<'IDEAS'
+          import sys
+          from pathlib import Path
+          p=Path(sys.argv[1]); s=p.read_text()
+          a=s.index("struct IdeasView: View {")
+          b=s.index("// MARK: - SHOPPING", a)
+          new=r'''struct IdeasView: View {
+              @State private var ideas: [String] = storedArray("ideas")
+              @State private var editingIdea: String?
+              @State private var showAdd = false
+
+              var body: some View {
+                  HFPageBackground {
+                      ScrollView(showsIndicators: false) {
+                          LazyVStack(spacing: 0) {
+                              ForEach(ideas, id: \.self) { idea in
+                                  Button {
+                                      editingIdea = idea
+                                  } label: {
+                                      HStack(spacing: 13) {
+                                          Image(systemName: "lightbulb")
+                                              .foregroundStyle(hfGold)
+                                          Text(idea)
+                                              .font(.system(size: 16))
+                                              .foregroundStyle(hfText)
+                                          Spacer()
+                                          Image(systemName: "chevron.right")
+                                              .font(.system(size: 13))
+                                              .foregroundStyle(hfMuted)
+                                      }
+                                      .padding(20)
+                                      .contentShape(Rectangle())
+                                  }
+                                  .buttonStyle(.plain)
+                                  .overlay(alignment: .bottom) {
+                                      Rectangle().fill(hfLine).frame(height: 1)
+                                  }
+                              }
+                          }
+                      }
+                  }
+                  .navigationTitle("Nápady")
+                  .navigationBarTitleDisplayMode(.inline)
+                  .toolbarBackground(hfBackground, for: .navigationBar)
+                  .toolbar {
+                      ToolbarItem(placement: .topBarTrailing) {
+                          Button { showAdd = true } label: {
+                              Image(systemName: "plus")
+                                  .foregroundStyle(hfText)
+                                  .frame(width: 40, height: 40)
+                                  .background(hfGold.opacity(0.16), in: Circle())
+                          }
+                      }
+                  }
+                  .sheet(
+                      isPresented: Binding(
+                          get: { editingIdea != nil },
+                          set: { if !$0 { editingIdea = nil } }
+                      )
+                  ) {
+                      HFIdeaEditView(
+                          idea: editingIdea ?? "",
+                          onSave: { value in
+                              if let i = ideas.firstIndex(of: editingIdea ?? "") {
+                                  ideas[i] = value
+                                  UserDefaults.standard.set(ideas, forKey: "ideas")
+                              }
+                          },
+                          onDelete: {
+                              ideas.removeAll { $0 == (editingIdea ?? "") }
+                              UserDefaults.standard.set(ideas, forKey: "ideas")
+                          }
+                      )
+                  }
+                  .sheet(isPresented: $showAdd) {
+                      HFTextAddView(
+                          title: "Nový nápad",
+                          placeholder: "Napíš nápad…"
+                      ) { value in
+                          let text = value.trimmingCharacters(in: .whitespacesAndNewlines)
+                          guard !text.isEmpty else { return }
+                          ideas.append(text)
+                          UserDefaults.standard.set(ideas, forKey: "ideas")
+                      }
+                  }
+              }
+          }
+
+          struct HFIdeaEditView: View {
+              @Environment(\.dismiss) private var dismiss
+              let idea: String
+              let onSave: (String) -> Void
+              let onDelete: () -> Void
+              @State private var text: String
+
+              init(
+                  idea: String,
+                  onSave: @escaping (String) -> Void,
+                  onDelete: @escaping () -> Void
+              ) {
+                  self.idea = idea
+                  self.onSave = onSave
+                  self.onDelete = onDelete
+                  _text = State(initialValue: idea)
+              }
+
+              var body: some View {
+                  NavigationStack {
+                      Form {
+                          Section("Nápad") {
+                              TextField("Napíš nápad…", text: $text)
+                          }
+
+                          Section {
+                              Button(role: .destructive) {
+                                  onDelete()
+                                  dismiss()
+                              } label: {
+                                  Label("Vymazať nápad", systemImage: "trash")
+                              }
+                          }
+                      }
+                      .navigationTitle("Upraviť nápad")
+                      .navigationBarTitleDisplayMode(.inline)
+                      .toolbar {
+                          ToolbarItem(placement: .cancellationAction) {
+                              Button("Zrušiť") { dismiss() }
+                          }
+                          ToolbarItem(placement: .confirmationAction) {
+                              Button("Uložiť") {
+                                  let value = text.trimmingCharacters(in: .whitespacesAndNewlines)
+                                  guard !value.isEmpty else { return }
+                                  onSave(value)
+                                  dismiss()
+                              }
+                          }
+                      }
+                  }
+              }
+          }
+
           python3 - "$APP_DIR/ContentView.swift" <<'PERSIST'
           import sys
           from pathlib import Path
