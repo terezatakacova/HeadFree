@@ -1,4 +1,5 @@
 name: Build HeadFree
+# Final combined build: persistence, expense editing/deletion, visual polish and icon.
 
 on:
   workflow_dispatch:
