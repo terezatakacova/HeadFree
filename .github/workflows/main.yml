@@ -126,6 +126,91 @@ jobs:
           sed -i '' 's/INFOPLIST_KEY_UIRequiresFullScreen = NO;/INFOPLIST_KEY_UIRequiresFullScreen = YES;/g' "$PROJECT/project.pbxproj"
           sed -i '' 's/com.terezatakacova.HeadFree/com.terezatakacova.HeadFree5/g' "$PROJECT/project.pbxproj"
 
+          python3 - "$APP_DIR/ContentView.swift" <<'PYEXP'
+          import sys
+          from pathlib import Path
+          p=Path(sys.argv[1]); s=p.read_text()
+          a=s.index("struct ExpensesView: View {"); b=s.index("// MARK: - SIMPLE ADD",a)
+          new=r'''struct ExpensesView: View {
+              @State private var expenses: [String] = storedArray("plannedExpenses")
+              @State private var editingExpense: String?
+              @State private var showAdd = false
+              var body: some View {
+                  HFPageBackground {
+                      ScrollView(showsIndicators: false) {
+                          LazyVStack(spacing: 0) {
+                              ForEach(expenses, id: \.self) { expense in
+                                  Button { editingExpense = expense } label: {
+                                      HStack(spacing: 13) {
+                                          Image(systemName: "eurosign.circle").foregroundStyle(hfGold)
+                                          Text(expense).font(.system(size: 16)).foregroundStyle(hfText)
+                                          Spacer()
+                                          Image(systemName: "chevron.right").font(.system(size: 13)).foregroundStyle(hfMuted)
+                                      }.padding(20).contentShape(Rectangle())
+                                  }.buttonStyle(.plain)
+                                  .overlay(alignment: .bottom) { Rectangle().fill(hfLine).frame(height: 1) }
+                              }
+                          }
+                      }
+                  }
+                  .navigationTitle("Plánované výdavky")
+                  .navigationBarTitleDisplayMode(.inline)
+                  .toolbarBackground(hfBackground, for: .navigationBar)
+                  .toolbar {
+                      ToolbarItem(placement: .topBarTrailing) {
+                          Button { showAdd = true } label: {
+                              Image(systemName: "plus").foregroundStyle(hfText).frame(width: 40, height: 40).background(hfGold.opacity(0.16), in: Circle())
+                          }
+                      }
+                  }
+                  .sheet(item: $editingExpense) { expense in
+                      HFExpenseEditView(expense: expense, onSave: { value in
+                          if let i = expenses.firstIndex(of: expense) { expenses[i] = value; UserDefaults.standard.set(expenses, forKey: "plannedExpenses") }
+                      }, onDelete: {
+                          expenses.removeAll { $0 == expense }; UserDefaults.standard.set(expenses, forKey: "plannedExpenses")
+                      })
+                  }
+                  .sheet(isPresented: $showAdd) {
+                      HFTextAddView(title: "Nový výdavok", placeholder: "Čo plánuješ kúpiť alebo zaplatiť?") { value in
+                          let text=value.trimmingCharacters(in: .whitespacesAndNewlines); guard !text.isEmpty else { return }
+                          expenses.append(text); UserDefaults.standard.set(expenses, forKey: "plannedExpenses")
+                      }
+                  }
+              }
+          }
+
+          struct HFExpenseEditView: View {
+              @Environment(\.dismiss) private var dismiss
+              let expense: String; let onSave: (String)->Void; let onDelete: ()->Void
+              @State private var text: String
+              init(expense: String, onSave: @escaping (String)->Void, onDelete: @escaping ()->Void) {
+                  self.expense=expense; self.onSave=onSave; self.onDelete=onDelete; _text=State(initialValue: expense)
+              }
+              var body: some View {
+                  NavigationStack {
+                      Form {
+                          Section("Výdavok") { TextField("Čo plánuješ kúpiť alebo zaplatiť?", text: $text) }
+                          Section { Button(role: .destructive) { onDelete(); dismiss() } label: { Label("Vymazať výdavok", systemImage: "trash") } }
+                      }
+                      .navigationTitle("Upraviť výdavok").navigationBarTitleDisplayMode(.inline)
+                      .toolbar {
+                          ToolbarItem(placement: .cancellationAction) { Button("Zrušiť") { dismiss() } }
+                          ToolbarItem(placement: .confirmationAction) {
+                              Button("Uložiť") {
+                                  let value=text.trimmingCharacters(in: .whitespacesAndNewlines); guard !value.isEmpty else { return }
+                                  onSave(value); dismiss()
+                              }
+                          }
+                      }
+                  }
+              }
+          }
+
+          // MARK: - SIMPLE ADD
+          '''
+          p.write_text(s[:a]+new+s[b+len("// MARK: - SIMPLE ADD"):])
+          PYEXP
+
           swift HeadFree_IconGenerator.swift "$APP_DIR/Assets.xcassets/AppIcon.appiconset/AppIcon.png"
 
           grep -q 'Image("HeadFreeIntroReference")' "$APP_DIR/ContentView.swift"
