@@ -62,52 +62,51 @@ jobs:
           intro_start = s.index("struct HFIntroView: View {")
           intro_end = s.index("struct HeadFreeHomeView: View {")
 
-          intro = r'''struct HFIntroView: View {
+                    intro = r'''struct HFIntroView: View {
               let onContinue: () -> Void
+
+              private let paper = Color(red: 0.95, green: 0.93, blue: 0.87)
+              private let ink = Color(red: 0.25, green: 0.24, blue: 0.21)
+              private let olive = Color(red: 0.43, green: 0.51, blue: 0.36)
 
               var body: some View {
                   GeometryReader { geo in
                       ZStack {
-                          Color(red: 0.95, green: 0.93, blue: 0.87)
-                              .ignoresSafeArea()
+                          paper.ignoresSafeArea()
 
                           VStack(spacing: 0) {
-                              Spacer(minLength: 34)
+                              Spacer()
 
                               Image("HeadFreeIntroIcon")
                                   .resizable()
                                   .scaledToFit()
-                                  .frame(width: min(170, geo.size.width * 0.42),
-                                         height: min(170, geo.size.width * 0.42))
-                                  .clipShape(RoundedRectangle(cornerRadius: 38, style: .continuous))
-                                  .shadow(color: .black.opacity(0.06), radius: 12, y: 5)
+                                  .frame(width: min(150, geo.size.width * 0.38),
+                                         height: min(150, geo.size.width * 0.38))
 
                               Text("HeadFree")
-                                  .font(.system(size: 42, weight: .regular, design: .serif))
-                                  .foregroundStyle(Color(red: 0.17, green: 0.16, blue: 0.13))
-                                  .padding(.top, 18)
+                                  .font(.system(size: 44, weight: .regular, design: .serif))
+                                  .foregroundStyle(ink)
+                                  .padding(.top, 22)
+
+                              Text("Calm your mind.\nFree your head.")
+                                  .font(.system(size: 18, weight: .regular, design: .serif))
+                                  .lineSpacing(6)
+                                  .multilineTextAlignment(.center)
+                                  .foregroundStyle(ink.opacity(0.82))
+                                  .padding(.top, 12)
 
                               Spacer()
 
-                              Text("Calm your mind.\nFree your head.")
-                                  .font(.system(size: 17, weight: .regular, design: .serif))
-                                  .lineSpacing(5)
-                                  .multilineTextAlignment(.center)
-                                  .foregroundStyle(Color(red: 0.28, green: 0.27, blue: 0.23))
-                                  .padding(.bottom, 28)
-
                               Button(action: onContinue) {
-                                  HStack {
+                                  HStack(spacing: 12) {
                                       Text("Pokračovať")
                                           .font(.system(size: 17, weight: .medium))
-                                      Spacer()
                                       Image(systemName: "arrow.right")
-                                          .font(.system(size: 18))
+                                          .font(.system(size: 18, weight: .regular))
                                   }
                                   .foregroundStyle(.white)
-                                  .padding(.horizontal, 22)
                                   .frame(width: min(300, geo.size.width * 0.78), height: 56)
-                                  .background(Color(red: 0.43, green: 0.51, blue: 0.36), in: Capsule())
+                                  .background(olive, in: Capsule())
                               }
                               .buttonStyle(.plain)
                               .padding(.bottom, max(24, geo.safeAreaInsets.bottom + 12))
@@ -119,7 +118,7 @@ jobs:
               }
           }
 
-          s = s[:intro_start] + intro + s[intro_end:]
+
           p.write_text(s)
           PY
 
