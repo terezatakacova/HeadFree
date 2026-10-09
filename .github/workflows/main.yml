@@ -221,6 +221,21 @@ jobs:
           p = Path(sys.argv[1])
           s = p.read_text()
           s = s.replace(r'\\u{', r'\u{')
+          # Support both legacy delimited strings and native [String] UserDefaults values.
+          a = s.index("private func storedArray(")
+          b = s.index("// MARK: - TASK LISTS", a)
+          helper = '''private func storedArray(_ key: String) -> [String] {
+              if let values = UserDefaults.standard.array(forKey: key) as? [String] {
+                  return values
+              }
+              guard let value = UserDefaults.standard.string(forKey: key), !value.isEmpty else {
+                  return []
+              }
+              return value.components(separatedBy: "|||")
+          }
+
+          '''
+          s = s[:a] + helper + s[b:]
           p.write_text(s)
           PYPATCH
 
