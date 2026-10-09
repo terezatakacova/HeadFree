@@ -236,6 +236,19 @@ jobs:
 
           '''
           s = s[:a] + helper + s[b:]
+          save_helper = '''private func saveArray(_ values: [String], forKey key: String) {
+              UserDefaults.standard.removeObject(forKey: key)
+              UserDefaults.standard.set(values, forKey: key)
+          }
+
+          '''
+          insert_at = s.index("// MARK: - TASK LISTS")
+          s = s[:insert_at] + save_helper + s[insert_at:]
+          # Route every known editable list write through the same persistence helper.
+          s = s.replace('UserDefaults.standard.set(tasks, forKey: scope.tasksKey)', 'saveArray(tasks, forKey: scope.tasksKey)')
+          s = s.replace('UserDefaults.standard.set(Array(completed), forKey: scope.completedKey)', 'saveArray(Array(completed), forKey: scope.completedKey)')
+          for variable, key in [('ideas','ideas'),('items','shoppingItems'),('Array(completed)','completedShoppingItems'),('expenses','plannedExpenses'),('manual','manualReminders')]:
+              s = s.replace(f'UserDefaults.standard.set({variable}, forKey: "{key}")', f'saveArray({variable}, forKey: "{key}")')
           p.write_text(s)
           PYPATCH
 
