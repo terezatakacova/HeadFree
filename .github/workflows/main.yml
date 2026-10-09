@@ -276,10 +276,18 @@ jobs:
               '    let onDelete: () -> Void\n    @State private var text: String',
               '    let onDelete: () -> Void\n    @State private var text: String'
           )
-          s = s.replace(
-              '                rawNewTask: newText,\n                    newReminder: newReminder\n                )\n            }',
-              '                rawNewTask: newText,\n                    newReminder: newReminder\n                )\n            }, onDelete: {\n                delete(selectedTask.text)\n            }'
-          )
+          # Replace the full task editor call with valid named closures.
+          call_start = s.index("HFEditTaskView(")
+          call_end = s.index("\\n        }\\n    }\\n\\n    private func persist()", call_start)
+          task_editor_call = '''HFEditTaskView(
+                      originalTask: selectedTask.text,
+                      reminder: reminders[selectedTask.text],
+                      onSave: { newText, newReminder in
+                          editTask(oldTask: selectedTask.text, rawNewTask: newText, newReminder: newReminder)
+                      },
+                      onDelete: { delete(selectedTask.text) }
+                  )'''
+          s = s[:call_start] + task_editor_call + s[call_end:]
           old_button = '''                Button(role: .destructive) { onDelete(); dismiss() } label: {
                     Label("Vymazať úlohu", systemImage: "trash").frame(maxWidth: .infinity).frame(height: 48)
                 }.padding(.horizontal, 20).padding(.top, 14)
