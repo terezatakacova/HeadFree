@@ -224,6 +224,240 @@ jobs:
           p.write_text(s)
           PYPATCH
 
+          # Apply the remaining agreed UI and CRUD fixes to Ideas, planned expenses and reminders.
+          python3 - "$APP_DIR/ContentView.swift" <<'PYREMAIN'
+          import sys
+          from pathlib import Path
+          p = Path(sys.argv[1])
+          s = p.read_text()
+
+          a = s.index("struct IdeasView: View {")
+          b = s.index("// MARK: - SHOPPING", a)
+          ideas = r'''struct IdeasView: View {
+              @State private var ideas: [String] = storedArray("ideas")
+              @State private var editingIdea: String?
+              @State private var showAdd = false
+              var body: some View {
+                  HFPageBackground {
+                      ScrollView(showsIndicators: false) {
+                          LazyVStack(spacing: 0) {
+                              ForEach(ideas, id: \.self) { idea in
+                                  Button { editingIdea = idea } label: {
+                                      HStack(spacing: 13) {
+                                          Image(systemName: "lightbulb").foregroundStyle(hfGold)
+                                          Text(idea).font(.system(size: 16)).foregroundStyle(hfText)
+                                          Spacer()
+                                          Image(systemName: "chevron.right").font(.system(size: 13)).foregroundStyle(hfMuted)
+                                      }.padding(20).contentShape(Rectangle())
+                                  }.buttonStyle(.plain)
+                                  .overlay(alignment: .bottom) { Rectangle().fill(hfLine).frame(height: 1) }
+                              }
+                          }
+                      }
+                  }
+                  .navigationTitle("Nápady").navigationBarTitleDisplayMode(.inline)
+                  .toolbarBackground(hfBackground, for: .navigationBar)
+                  .toolbar { ToolbarItem(placement: .topBarTrailing) {
+                      Button { showAdd = true } label: {
+                          Image(systemName: "plus").foregroundStyle(hfText).frame(width: 40, height: 40).background(hfGold.opacity(0.16), in: Circle())
+                      }
+                  }}
+                  .sheet(isPresented: Binding(get: { editingIdea != nil }, set: { if !$0 { editingIdea = nil } })) {
+                      HFTextEditView(title: "Upraviť nápad", placeholder: "Napíš nápad…", value: editingIdea ?? "", onSave: { value in
+                          if let i = ideas.firstIndex(of: editingIdea ?? "") { ideas[i] = value; UserDefaults.standard.set(ideas, forKey: "ideas") }
+                      }, onDelete: {
+                          ideas.removeAll { $0 == (editingIdea ?? "") }; UserDefaults.standard.set(ideas, forKey: "ideas")
+                      })
+                  }
+                  .sheet(isPresented: $showAdd) {
+                      HFTextAddView(title: "Nový nápad", placeholder: "Napíš nápad…") { value in
+                          let text = value.trimmingCharacters(in: .whitespacesAndNewlines)
+                          guard !text.isEmpty else { return }
+                          ideas.append(text); UserDefaults.standard.set(ideas, forKey: "ideas")
+                      }
+                  }
+              }
+          }
+
+          '''
+          s = s[:a] + ideas + s[b:]
+
+          # Replace the system Form with the app's own beige editor surface.
+          old = '''              var body: some View {
+                  NavigationStack {
+                      Form {
+                          Section("Výdavok") { TextField("Čo plánuješ kúpiť alebo zaplatiť?", text: $text) }
+                          Section { Button(role: .destructive) { onDelete(); dismiss() } label: { Label("Vymazať výdavok", systemImage: "trash") } }
+                      }
+                      .navigationTitle("Upraviť výdavok").navigationBarTitleDisplayMode(.inline)
+                      .toolbar {
+                          ToolbarItem(placement: .cancellationAction) { Button("Zrušiť") { dismiss() } }
+                          ToolbarItem(placement: .confirmationAction) {
+                              Button("Uložiť") {
+                                  let value=text.trimmingCharacters(in: .whitespacesAndNewlines); guard !value.isEmpty else { return }
+                                  onSave(value); dismiss()
+                              }
+                          }
+                      }
+                  }
+              }'''
+          new = '''              var body: some View {
+                  NavigationStack {
+                      HFPageBackground {
+                          VStack(alignment: .leading, spacing: 18) {
+                              Text("VÝDAVOK").font(.system(size: 12, weight: .semibold)).tracking(1.2).foregroundStyle(hfMuted)
+                              TextField("Čo plánuješ kúpiť alebo zaplatiť?", text: $text, axis: .vertical)
+                                  .font(.system(size: 17)).foregroundStyle(hfText).lineLimit(2...5)
+                                  .padding(16).background(hfText.opacity(0.055), in: RoundedRectangle(cornerRadius: 16))
+                                  .overlay { RoundedRectangle(cornerRadius: 16).stroke(hfLine, lineWidth: 1) }
+                              Button(role: .destructive) { onDelete(); dismiss() } label: {
+                                  Label("Vymazať výdavok", systemImage: "trash").frame(maxWidth: .infinity).frame(height: 52)
+                                      .background(.red.opacity(0.07), in: RoundedRectangle(cornerRadius: 16))
+                              }.tint(.red.opacity(0.85))
+                              Spacer()
+                          }.padding(20)
+                      }
+                      .navigationTitle("Upraviť výdavok").navigationBarTitleDisplayMode(.inline)
+                      .toolbarBackground(hfBackground, for: .navigationBar)
+                      .toolbar {
+                          ToolbarItem(placement: .cancellationAction) { Button("Zrušiť") { dismiss() }.foregroundStyle(hfText) }
+                          ToolbarItem(placement: .confirmationAction) {
+                              Button("Uložiť") {
+                                  let value=text.trimmingCharacters(in: .whitespacesAndNewlines); guard !value.isEmpty else { return }
+                                  onSave(value); dismiss()
+                              }.foregroundStyle(hfGreen).fontWeight(.semibold)
+                          }
+                      }
+                  }
+              }'''
+          if old not in s:
+              raise SystemExit("Expense editor pattern not found; refusing partial patch")
+          s = s.replace(old, new, 1)
+
+          # Shared styled text editor for editing ideas without relying on system Form.
+          marker = "// MARK: - SIMPLE ADD"
+          edit_view = r'''struct HFTextEditView: View {
+              @Environment(\.dismiss) private var dismiss
+              let title: String
+              let placeholder: String
+              let value: String
+              let onSave: (String) -> Void
+              let onDelete: () -> Void
+              @State private var text: String
+              init(title: String, placeholder: String, value: String, onSave: @escaping (String) -> Void, onDelete: @escaping () -> Void) {
+                  self.title = title; self.placeholder = placeholder; self.value = value
+                  self.onSave = onSave; self.onDelete = onDelete
+                  _text = State(initialValue: value)
+              }
+              var body: some View {
+                  NavigationStack {
+                      HFPageBackground {
+                          VStack(alignment: .leading, spacing: 18) {
+                              Text(title.uppercased()).font(.system(size: 12, weight: .semibold)).tracking(1.2).foregroundStyle(hfMuted)
+                              TextEditor(text: $text).font(.system(size: 17)).foregroundStyle(hfText)
+                                  .scrollContentBackground(.hidden).padding(12).frame(minHeight: 130)
+                                  .background(hfText.opacity(0.055), in: RoundedRectangle(cornerRadius: 16))
+                                  .overlay { RoundedRectangle(cornerRadius: 16).stroke(hfLine, lineWidth: 1) }
+                              Button(role: .destructive) { onDelete(); dismiss() } label: {
+                                  Label("Vymazať", systemImage: "trash").frame(maxWidth: .infinity).frame(height: 52)
+                                      .background(.red.opacity(0.07), in: RoundedRectangle(cornerRadius: 16))
+                              }.tint(.red.opacity(0.85))
+                              Spacer()
+                          }.padding(20)
+                      }
+                      .navigationTitle(title).navigationBarTitleDisplayMode(.inline)
+                      .toolbarBackground(hfBackground, for: .navigationBar)
+                      .toolbar {
+                          ToolbarItem(placement: .cancellationAction) { Button("Zrušiť") { dismiss() }.foregroundStyle(hfText) }
+                          ToolbarItem(placement: .confirmationAction) {
+                              Button("Uložiť") {
+                                  let v = text.trimmingCharacters(in: .whitespacesAndNewlines)
+                                  guard !v.isEmpty else { return }
+                                  onSave(v); dismiss()
+                              }.foregroundStyle(hfGreen).fontWeight(.semibold)
+                          }
+                      }
+                  }
+              }
+          }
+
+          '''
+          if marker not in s: raise SystemExit("Simple Add marker not found")
+          s = s.replace(marker, edit_view + marker, 1)
+
+          # Reminders are derived from tasks elsewhere; provide a working add/manage screen
+          # backed by a dedicated persisted list, while retaining task-derived reminders.
+          a = s.index("struct HFRemindersView: View {")
+          b = s.index("// MARK: - SETTINGS", a)
+          reminders = r'''struct HFRemindersView: View {
+              @State private var manual: [String] = storedArray("manualReminders")
+              @State private var editing: String?
+              @State private var showAdd = false
+              private var taskReminders: [(String, Date)] {
+                  var result: [(String, Date)] = []
+                  for scope in [HFTaskScope.today, .week, .month] {
+                      let tasks = storedArray(scope.tasksKey)
+                      let current = loadReminderData(scope.reminderKey)
+                      for task in tasks { if let date = current[task], date > Date() { result.append((task, date)) } }
+                  }
+                  return result.sorted { $0.1 < $1.1 }
+              }
+              var body: some View {
+                  HFPageBackground {
+                      ScrollView(showsIndicators: false) {
+                          LazyVStack(spacing: 0) {
+                              ForEach(Array(taskReminders.enumerated()), id: \.offset) { _, item in
+                                  HStack(spacing: 13) {
+                                      Image(systemName: "bell").foregroundStyle(hfGreen)
+                                      VStack(alignment: .leading, spacing: 4) {
+                                          Text(item.0).font(.system(size: 16)).foregroundStyle(hfText)
+                                          Text(item.1, style: .date).font(.system(size: 13)).foregroundStyle(hfMuted)
+                                      }
+                                      Spacer()
+                                      Text(item.1, style: .time).font(.system(size: 13)).foregroundStyle(hfMuted)
+                                  }.padding(20).overlay(alignment: .bottom) { Rectangle().fill(hfLine).frame(height: 1).padding(.leading, 54) }
+                              }
+                              ForEach(manual, id: \.self) { reminder in
+                                  Button { editing = reminder } label: {
+                                      HStack(spacing: 13) {
+                                          Image(systemName: "bell.badge").foregroundStyle(hfGold)
+                                          Text(reminder).font(.system(size: 16)).foregroundStyle(hfText)
+                                          Spacer()
+                                          Image(systemName: "chevron.right").font(.system(size: 13)).foregroundStyle(hfMuted)
+                                      }.padding(20).contentShape(Rectangle())
+                                  }.buttonStyle(.plain)
+                                  .overlay(alignment: .bottom) { Rectangle().fill(hfLine).frame(height: 1).padding(.leading, 54) }
+                              }
+                          }
+                      }
+                  }
+                  .navigationTitle("Pripomienky").navigationBarTitleDisplayMode(.inline)
+                  .toolbarBackground(hfBackground, for: .navigationBar)
+                  .toolbar { ToolbarItem(placement: .topBarTrailing) {
+                      Button { showAdd = true } label: { Image(systemName: "plus").foregroundStyle(hfText).frame(width: 40, height: 40).background(hfGold.opacity(0.16), in: Circle()) }
+                  }}
+                  .sheet(isPresented: $showAdd) {
+                      HFTextAddView(title: "Nová pripomienka", placeholder: "Na čo si chceš spomenúť?") { value in
+                          let v = value.trimmingCharacters(in: .whitespacesAndNewlines)
+                          guard !v.isEmpty else { return }
+                          manual.append(v); UserDefaults.standard.set(manual, forKey: "manualReminders")
+                      }
+                  }
+                  .sheet(isPresented: Binding(get: { editing != nil }, set: { if !$0 { editing = nil } })) {
+                      HFTextEditView(title: "Upraviť pripomienku", placeholder: "Na čo si chceš spomenúť?", value: editing ?? "", onSave: { value in
+                          if let i = manual.firstIndex(of: editing ?? "") { manual[i] = value; UserDefaults.standard.set(manual, forKey: "manualReminders") }
+                      }, onDelete: {
+                          manual.removeAll { $0 == (editing ?? "") }; UserDefaults.standard.set(manual, forKey: "manualReminders")
+                      })
+                  }
+              }
+          }
+
+          '''
+          s = s[:a] + reminders + s[b:]
+          p.write_text(s)
+          PYREMAIN
+
           curl -fsSL "https://raw.githubusercontent.com/terezatakacova/HeadFree/main/HeadFree_AppIcon_FINAL.jpg" -o /tmp/HeadFree_AppIcon_FINAL.jpg
           sips -s format png -z 1024 1024 /tmp/HeadFree_AppIcon_FINAL.jpg --out "$APP_DIR/Assets.xcassets/AppIcon.appiconset/AppIcon.png" >/dev/null
           cp "$APP_DIR/Assets.xcassets/AppIcon.appiconset/AppIcon.png" "$APP_DIR/Assets.xcassets/HeadFreeIntroIcon.imageset/HeadFreeIntroIcon.png"
