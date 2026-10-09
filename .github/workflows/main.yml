@@ -259,6 +259,24 @@ jobs:
           p = Path(sys.argv[1])
           s = p.read_text()
 
+          # Let users delete tasks from the task editor, including the weekly list.
+          s = s.replace(
+              '    let onSave: (String, Date?) -> Void\\n\\n    init(originalTask: String, reminder: Date?, onSave: @escaping (String, Date?) -> Void) {',
+              '    let onSave: (String, Date?) -> Void\\n    let onDelete: () -> Void\\n\\n    init(originalTask: String, reminder: Date?, onSave: @escaping (String, Date?) -> Void, onDelete: @escaping () -> Void) {'
+          )
+          s = s.replace(
+              '        self.onSave = onSave\\n        _text = State(initialValue: originalTask)',
+              '        self.onSave = onSave\\n        self.onDelete = onDelete\\n        _text = State(initialValue: originalTask)'
+          )
+          s = s.replace(
+              '                newReminder: newReminder\\n                )\\n            }\\n        }\\n    }\\n\\n    private func persist()',
+              '                newReminder: newReminder\\n                )\\n            }, onDelete: {\\n                delete(selectedTask.text)\\n            })\\n        }\\n    }\\n\\n    private func persist()'
+          )
+          s = s.replace(
+              '                        HFPlainInput(title: "Úloha", text: $text, placeholder: "Čo treba urobiť?")',
+              '                        HFPlainInput(title: "Úloha", text: $text, placeholder: "Čo treba urobiť?")\\n                        Button(role: .destructive) { onDelete(); dismiss() } label: {\\n                            Label("Vymazať úlohu", systemImage: "trash").frame(maxWidth: .infinity).frame(height: 48)\\n                        }.padding(.horizontal, 20).padding(.top, 14)'
+          )
+
           a = s.index("struct IdeasView: View {")
           b = s.index("// MARK: - SHOPPING", a)
           ideas = r'''struct IdeasView: View {
