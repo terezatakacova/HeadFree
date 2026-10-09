@@ -259,7 +259,7 @@ jobs:
           p = Path(sys.argv[1])
           s = p.read_text()
 
-                    # Add a fully wired delete action to the task editor.
+          # Add a fully wired delete action to the task editor.
           s = s.replace(
               '    let onSave: (String, Date?) -> Void',
               '    let onSave: (String, Date?) -> Void\n    let onDelete: () -> Void'
