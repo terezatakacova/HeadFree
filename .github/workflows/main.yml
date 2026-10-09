@@ -276,30 +276,20 @@ jobs:
               '    let onDelete: () -> Void\n    @State private var text: String',
               '    let onDelete: () -> Void\n    @State private var text: String'
           )
-          # Wire the delete closure as an argument to HFEditTaskView's initializer.
-          old_call = '''HFEditTaskView(
-                      originalTask: selectedTask.text,
-                      reminder: reminders[selectedTask.text]
-                  ) { newText, newReminder in
-                      editTask(
-                          oldTask: selectedTask.text,
-                          rawNewTask: newText,
-                          newReminder: newReminder
+          # Replace the complete task editor sheet using stable boundaries.
+          sheet_start = s.index(".sheet(item: $editingTask) { selectedTask in")
+          sheet_end = s.index("\n        }\n    }\n\n    private func persist()", sheet_start)
+          sheet = '''.sheet(item: $editingTask) { selectedTask in
+                      HFEditTaskView(
+                          originalTask: selectedTask.text,
+                          reminder: reminders[selectedTask.text],
+                          onSave: { newText, newReminder in
+                              editTask(oldTask: selectedTask.text, rawNewTask: newText, newReminder: newReminder)
+                          },
+                          onDelete: { delete(selectedTask.text) }
                       )
-                  }, onDelete: {
-                      delete(selectedTask.text)
                   }'''
-          new_call = '''HFEditTaskView(
-                      originalTask: selectedTask.text,
-                      reminder: reminders[selectedTask.text],
-                      onSave: { newText, newReminder in
-                          editTask(oldTask: selectedTask.text, rawNewTask: newText, newReminder: newReminder)
-                      },
-                      onDelete: { delete(selectedTask.text) }
-                  )'''
-          if old_call not in s:
-              raise SystemExit("Original task editor call not found")
-          s = s.replace(old_call, new_call, 1)
+          s = s[:sheet_start] + sheet + s[sheet_end:]
           old_button = '''                Button(role: .destructive) { onDelete(); dismiss() } label: {
                     Label("Vymazať úlohu", systemImage: "trash").frame(maxWidth: .infinity).frame(height: 48)
                 }.padding(.horizontal, 20).padding(.top, 14)
