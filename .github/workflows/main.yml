@@ -290,6 +290,15 @@ jobs:
                       )
                   }'''
           s = s[:sheet_start] + sheet + s[sheet_end:]
+          # The replaced sheet already closes its own modifier; remove the leftover brace.
+          s = s.replace('''        }
+        }
+    }
+
+    private func persist()''', '''        }
+    }
+
+    private func persist()''', 1)
           old_button = '''                Button(role: .destructive) { onDelete(); dismiss() } label: {
                     Label("Vymazať úlohu", systemImage: "trash").frame(maxWidth: .infinity).frame(height: 48)
                 }.padding(.horizontal, 20).padding(.top, 14)
