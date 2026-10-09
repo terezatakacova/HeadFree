@@ -282,26 +282,20 @@ jobs:
           '''
           s = s[:a] + ideas + s[b:]
 
-          # Replace the system Form with the app's own beige editor surface.
-          old = '''              var body: some View {
-                  NavigationStack {
-                      Form {
-                          Section("Výdavok") { TextField("Čo plánuješ kúpiť alebo zaplatiť?", text: $text) }
-                          Section { Button(role: .destructive) { onDelete(); dismiss() } label: { Label("Vymazať výdavok", systemImage: "trash") } }
-                      }
-                      .navigationTitle("Upraviť výdavok").navigationBarTitleDisplayMode(.inline)
-                      .toolbar {
-                          ToolbarItem(placement: .cancellationAction) { Button("Zrušiť") { dismiss() } }
-                          ToolbarItem(placement: .confirmationAction) {
-                              Button("Uložiť") {
-                                  let value=text.trimmingCharacters(in: .whitespacesAndNewlines); guard !value.isEmpty else { return }
-                                  onSave(value); dismiss()
-                              }
-                          }
-                      }
-                  }
-              }'''
-          new = '''              var body: some View {
+          # Replace the expense editor by source boundaries, not brittle whitespace matching.
+          start = s.index("struct HFExpenseEditView: View {")
+          end = s.index("// MARK: - SIMPLE ADD", start)
+          expense_editor = r'''struct HFExpenseEditView: View {
+              @Environment(\.dismiss) private var dismiss
+              let expense: String
+              let onSave: (String) -> Void
+              let onDelete: () -> Void
+              @State private var text: String
+              init(expense: String, onSave: @escaping (String) -> Void, onDelete: @escaping () -> Void) {
+                  self.expense = expense; self.onSave = onSave; self.onDelete = onDelete
+                  _text = State(initialValue: expense)
+              }
+              var body: some View {
                   NavigationStack {
                       HFPageBackground {
                           VStack(alignment: .leading, spacing: 18) {
@@ -323,16 +317,18 @@ jobs:
                           ToolbarItem(placement: .cancellationAction) { Button("Zrušiť") { dismiss() }.foregroundStyle(hfText) }
                           ToolbarItem(placement: .confirmationAction) {
                               Button("Uložiť") {
-                                  let value=text.trimmingCharacters(in: .whitespacesAndNewlines); guard !value.isEmpty else { return }
+                                  let value = text.trimmingCharacters(in: .whitespacesAndNewlines)
+                                  guard !value.isEmpty else { return }
                                   onSave(value); dismiss()
                               }.foregroundStyle(hfGreen).fontWeight(.semibold)
                           }
                       }
                   }
-              }'''
-          if old not in s:
-              raise SystemExit("Expense editor pattern not found; refusing partial patch")
-          s = s.replace(old, new, 1)
+              }
+          }
+
+          '''
+          s = s[:start] + expense_editor + s[end:]
 
           # Shared styled text editor for editing ideas without relying on system Form.
           marker = "// MARK: - SIMPLE ADD"
