@@ -496,13 +496,16 @@ jobs:
           # Keep storage and visible SwiftUI state synchronized across every list screen.
           s = s.replace('UserDefaults.standard.set(manual, forKey: "manualReminders")', 'saveArray(manual, forKey: "manualReminders")')
 
-          shopping_anchor = '.navigationTitle("N\\\\u{00E1}kupy").navigationBarTitleDisplayMode(.inline).toolbarBackground(hfBackground, for: .navigationBar)'
-          shopping_hooks = shopping_anchor + '''
+          shopping_anchor = '.toolbarBackground(hfBackground, for: .navigationBar)'
+          shopping_start = s.index("struct ShoppingView: View {")
+          shopping_end = s.index("// MARK: - EXPENSES", shopping_start)
+          shopping_block = s[shopping_start:shopping_end]
+          if shopping_anchor not in shopping_block: raise SystemExit("Shopping screen toolbar anchor missing")
+          if '.onAppear { items = storedArray("shoppingItems")' not in shopping_block:
+              s = s[:shopping_start] + shopping_block.replace(shopping_anchor, shopping_anchor + '''
                   .onAppear { items = storedArray("shoppingItems"); completed = Set(storedArray("completedShoppingItems")) }
                   .onChange(of: items) { _, value in saveArray(value, forKey: "shoppingItems") }
-                  .onChange(of: completed) { _, value in saveArray(Array(value), forKey: "completedShoppingItems") }'''
-          if shopping_anchor not in s: raise SystemExit("Shopping screen anchor missing")
-          s = s.replace(shopping_anchor, shopping_hooks, 1)
+                  .onChange(of: completed) { _, value in saveArray(Array(value), forKey: "completedShoppingItems") }''', 1) + s[shopping_end:]
 
           expense_anchor = '.navigationTitle("Plánované výdavky")'
           expense_hooks = expense_anchor + '''
