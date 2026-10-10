@@ -493,6 +493,34 @@ jobs:
 
           '''
           s = s[:a] + reminders + s[b:]
+          # Keep storage and visible SwiftUI state synchronized across every list screen.
+          s = s.replace('UserDefaults.standard.set(manual, forKey: "manualReminders")', 'saveArray(manual, forKey: "manualReminders")')
+
+          shopping_anchor = '.navigationTitle("N\\\\u{00E1}kupy").navigationBarTitleDisplayMode(.inline).toolbarBackground(hfBackground, for: .navigationBar)'
+          shopping_hooks = shopping_anchor + '''
+                  .onAppear { items = storedArray("shoppingItems"); completed = Set(storedArray("completedShoppingItems")) }
+                  .onChange(of: items) { _, value in saveArray(value, forKey: "shoppingItems") }
+                  .onChange(of: completed) { _, value in saveArray(Array(value), forKey: "completedShoppingItems") }'''
+          if shopping_anchor not in s: raise SystemExit("Shopping screen anchor missing")
+          s = s.replace(shopping_anchor, shopping_hooks, 1)
+
+          expense_anchor = '.navigationTitle("Plánované výdavky")'
+          expense_hooks = expense_anchor + '''
+                  .onAppear { expenses = storedArray("plannedExpenses") }
+                  .onChange(of: expenses) { _, value in saveArray(value, forKey: "plannedExpenses") }'''
+          if expense_anchor not in s: raise SystemExit("Expenses screen anchor missing")
+          s = s.replace(expense_anchor, expense_hooks, 1)
+
+          ideas_anchor = '.navigationTitle("Nápady").navigationBarTitleDisplayMode(.inline)'
+          ideas_hooks = ideas_anchor + '''
+                  .onChange(of: ideas) { _, value in saveArray(value, forKey: "ideas") }'''
+          if ideas_anchor not in s: raise SystemExit("Ideas screen anchor missing")
+          s = s.replace(ideas_anchor, ideas_hooks, 1)
+
+          # Ensure list writes use the same native-array storage method.
+          for var, key in [("items", "shoppingItems"), ("expenses", "plannedExpenses"), ("manual", "manualReminders")]:
+              s = s.replace(f'UserDefaults.standard.set({var}, forKey: "{key}")', f'saveArray({var}, forKey: "{key}")')
+
           p.write_text(s)
           PYREMAIN
 
