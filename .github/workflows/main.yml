@@ -534,12 +534,11 @@ jobs:
           p = Path(sys.argv[1])
           s = p.read_text()
 
-          # Attach the delete callback to the existing task editor sheet.
+          call_anchor = "reminder: reminders[selectedTask.text]"
           if "onDelete: { delete(selectedTask.text) }" not in s:
-              anchor = "reminder: reminders[selectedTask.text]"
-              if anchor not in s:
+              if call_anchor not in s:
                   raise SystemExit("Task editor call anchor missing")
-              s = s.replace(anchor, anchor + ",\n                onDelete: { delete(selectedTask.text) }", 1)
+              s = s.replace(call_anchor, call_anchor + "," + chr(10) + "                onDelete: { delete(selectedTask.text) }", 1)
 
           start = s.index("struct HFEditTaskView: View {")
           end = s.index("// MARK: - IDEAS", start)
@@ -549,7 +548,7 @@ jobs:
           if "let onDelete: () -> Void" not in block:
               if decl not in block:
                   raise SystemExit("Task editor callback declaration missing")
-              block = block.replace(decl, decl + "\n    let onDelete: () -> Void", 1)
+              block = block.replace(decl, decl + chr(10) + "    let onDelete: () -> Void", 1)
 
           old_init = "init(originalTask: String, reminder: Date?, onSave:"
           new_init = "init(originalTask: String, reminder: Date?, onDelete: @escaping () -> Void, onSave:"
@@ -559,10 +558,10 @@ jobs:
               block = block.replace(old_init, new_init, 1)
 
           if "self.onDelete = onDelete" not in block:
-              anchor = "self.onSave = onSave"
-              if anchor not in block:
+              assign = "self.onSave = onSave"
+              if assign not in block:
                   raise SystemExit("Task editor callback assignment missing")
-              block = block.replace(anchor, anchor + "\n        self.onDelete = onDelete", 1)
+              block = block.replace(assign, assign + chr(10) + "        self.onDelete = onDelete", 1)
 
           button = '''                        Button(role: .destructive) {
                             onDelete()
@@ -578,11 +577,11 @@ jobs:
                         .padding(.top, 18)
 
 '''
-          if "Label(\"Vymazať úlohu\"" not in block:
-              anchor = "                        HFPlainInput(title: \"Úloha\", text: $text, placeholder: \"Čo treba urobiť?\")"
-              if anchor not in block:
+          if 'Label("Vymazať úlohu"' not in block:
+              layout_anchor = '                        HFPlainInput(title: "Úloha", text: $text, placeholder: "Čo treba urobiť?")'
+              if layout_anchor not in block:
                   raise SystemExit("Task editor layout anchor missing")
-              block = block.replace(anchor, button + anchor, 1)
+              block = block.replace(layout_anchor, button + layout_anchor, 1)
 
           s = s[:start] + block + s[end:]
           p.write_text(s)
