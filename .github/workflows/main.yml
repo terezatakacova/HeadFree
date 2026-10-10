@@ -527,6 +527,56 @@ jobs:
           p.write_text(s)
           PYREMAIN
 
+          # Add an explicit delete button to the task editor and wire it to the existing delete function.
+          python3 - "$APP_DIR/ContentView.swift" <<'PYTASKDELETE'
+          from pathlib import Path
+          import sys
+          p = Path(sys.argv[1])
+          s = p.read_text()
+          nl = chr(10)
+          call = "reminder: reminders[selectedTask.text]"
+          if "onDelete: { delete(selectedTask.text) }" not in s:
+              if call not in s: raise SystemExit("Task editor call anchor missing")
+              s = s.replace(call, call + "," + nl + "                onDelete: { delete(selectedTask.text) }", 1)
+          start = s.index("struct HFEditTaskView: View {")
+          end = s.index("// MARK: - IDEAS", start)
+          b = s[start:end]
+          decl = "    let onSave: (String, Date?) -> Void"
+          if "let onDelete: () -> Void" not in b:
+              if decl not in b: raise SystemExit("Task editor callback declaration missing")
+              b = b.replace(decl, decl + nl + "    let onDelete: () -> Void", 1)
+          old = "init(originalTask: String, reminder: Date?, onSave: @escaping (String, Date?) -> Void)"
+          new = "init(originalTask: String, reminder: Date?, onDelete: @escaping () -> Void, onSave: @escaping (String, Date?) -> Void)"
+          if new not in b:
+              if old not in b: raise SystemExit("Task editor initializer missing")
+              b = b.replace(old, new, 1)
+          if "self.onDelete = onDelete" not in b:
+              ass = "self.onSave = onSave"
+              if ass not in b: raise SystemExit("Task editor callback assignment missing")
+              b = b.replace(ass, ass + nl + "        self.onDelete = onDelete", 1)
+          button = nl.join([
+              '                        Button(role: .destructive) {',
+              '                            onDelete()',
+              '                            dismiss()',
+              '                        } label: {',
+              '                            Label("Vymazať úlohu", systemImage: "trash")',
+              '                                .frame(maxWidth: .infinity)',
+              '                                .frame(height: 52)',
+              '                                .background(.red.opacity(0.07), in: RoundedRectangle(cornerRadius: 16))',
+              '                        }',
+              '                        .tint(.red.opacity(0.85))',
+              '                        .padding(.horizontal, 20)',
+              '                        .padding(.top, 18)',
+              ''
+          ]) + nl
+          anchor = '                        HFPlainInput(title: "Úloha", text: $text, placeholder: "Čo treba urobiť?")'
+          if 'Label("Vymazať úlohu"' not in b:
+              if anchor not in b: raise SystemExit("Task editor layout anchor missing")
+              b = b.replace(anchor, button + anchor, 1)
+          s = s[:start] + b + s[end:]
+          p.write_text(s)
+          PYTASKDELETE
+
           curl -fsSL "https://raw.githubusercontent.com/terezatakacova/HeadFree/main/HeadFree_AppIcon_FINAL.jpg" -o /tmp/HeadFree_AppIcon_FINAL.jpg
           sips -s format png -z 1024 1024 /tmp/HeadFree_AppIcon_FINAL.jpg --out "$APP_DIR/Assets.xcassets/AppIcon.appiconset/AppIcon.png" >/dev/null
           cp "$APP_DIR/Assets.xcassets/AppIcon.appiconset/AppIcon.png" "$APP_DIR/Assets.xcassets/HeadFreeIntroIcon.imageset/HeadFreeIntroIcon.png"
