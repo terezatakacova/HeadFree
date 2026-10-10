@@ -527,67 +527,35 @@ jobs:
           p.write_text(s)
           PYREMAIN
 
-          # Add a visible delete action to the task editor, including weekly tasks.
+          # Add a delete button to task editing; keep the change independent of screen-specific formatting.
           python3 - "$APP_DIR/ContentView.swift" <<'PYTASKDELETE'
           import sys
           from pathlib import Path
           p = Path(sys.argv[1])
           s = p.read_text()
-          old = '''            HFEditTaskView(
-                          originalTask: selectedTask.text,
-                          reminder: reminders[selectedTask.text]
-                      ) { newText, newReminder in
-                editTask(
-                    oldTask: selectedTask.text,
-                    rawNewTask: newText,
-                    newReminder: newReminder
-                )
-            }
-          }'''
-          new = '''            HFEditTaskView(
-                          originalTask: selectedTask.text,
-                          reminder: reminders[selectedTask.text],
-                          onSave: { newText, newReminder in
-                              editTask(
-                                  oldTask: selectedTask.text,
-                                  rawNewTask: newText,
-                                  newReminder: newReminder
-                              )
-                          },
-                          onDelete: { delete(selectedTask.text) }
-                      )
-          }'''
-          if old not in s:
+          call = '''                reminder: reminders[selectedTask.text]
+            ) { newText, newReminder in'''
+          replacement = '''                reminder: reminders[selectedTask.text],
+                onDelete: { delete(selectedTask.text) }
+            ) { newText, newReminder in'''
+          if call not in s:
               raise SystemExit("Task editor call anchor missing")
-          s = s.replace(old, new, 1)
-          old_init = '''    let onSave: (String, Date?) -> Void
-
-    init(originalTask: String, reminder: Date?, onSave: @escaping (String, Date?) -> Void) {
-        self.originalTask = originalTask
-        self.reminder = reminder
-        self.onSave = onSave'''
-          new_init = '''    let onSave: (String, Date?) -> Void
-    let onDelete: () -> Void
-
-    init(originalTask: String, reminder: Date?, onSave: @escaping (String, Date?) -> Void, onDelete: @escaping () -> Void) {
-        self.originalTask = originalTask
-        self.reminder = reminder
-        self.onSave = onSave
-        self.onDelete = onDelete'''
-          if old_init not in s:
-              raise SystemExit("Task editor initializer anchor missing")
-          s = s.replace(old_init, new_init, 1)
-          anchor = '''                        if reminderEnabled {
-                            DatePicker("Kedy?", selection: $date, displayedComponents: [.date, .hourAndMinute])
-                                .padding(20)
-                                .tint(hfGreen)
-                                .overlay(alignment: .bottom) {
-                                    Rectangle().fill(hfLine).frame(height: 1)
-                                }
-                        }'''
-          replacement = anchor + '''
-
-                        Button(role: .destructive) {
+          s = s.replace(call, replacement, 1)
+          declaration = '    let onSave: (String, Date?) -> Void\n'
+          if declaration not in s:
+              raise SystemExit("Task editor callback declaration missing")
+          s = s.replace(declaration, declaration + '    let onDelete: () -> Void\n', 1)
+          init_sig = '    init(originalTask: String, reminder: Date?, onSave: @escaping (String, Date?) -> Void) {'
+          init_new = '    init(originalTask: String, reminder: Date?, onDelete: @escaping () -> Void, onSave: @escaping (String, Date?) -> Void) {'
+          if init_sig not in s:
+              raise SystemExit("Task editor initializer missing")
+          s = s.replace(init_sig, init_new, 1)
+          init_assign = '        self.onSave = onSave\n'
+          if init_assign not in s:
+              raise SystemExit("Task editor callback assignment missing")
+          s = s.replace(init_assign, init_assign + '        self.onDelete = onDelete\n', 1)
+          toolbar_anchor = '                        if reminderEnabled {'
+          delete_button = '''                        Button(role: .destructive) {
                             onDelete()
                             dismiss()
                         } label: {
@@ -598,10 +566,12 @@ jobs:
                         }
                         .tint(.red.opacity(0.85))
                         .padding(.horizontal, 20)
-                        .padding(.top, 18)'''
-          if anchor not in s:
-              raise SystemExit("Task editor delete button anchor missing")
-          s = s.replace(anchor, replacement, 1)
+                        .padding(.top, 18)
+
+'''
+          if toolbar_anchor not in s:
+              raise SystemExit("Task editor layout anchor missing")
+          s = s.replace(toolbar_anchor, delete_button + toolbar_anchor, 1)
           p.write_text(s)
           PYTASKDELETE
 
