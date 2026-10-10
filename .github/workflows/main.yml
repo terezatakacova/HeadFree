@@ -527,39 +527,43 @@ jobs:
           p.write_text(s)
           PYREMAIN
 
-          # Add delete to the weekly task editor using boundaries scoped to that editor.
+          # Add a reliable delete action to the task editor.
           python3 - "$APP_DIR/ContentView.swift" <<'PYTASKDELETE'
           import sys
           from pathlib import Path
           p = Path(sys.argv[1])
           s = p.read_text()
 
-          call_old = '''                reminder: reminders[selectedTask.text]
-            ) { newText, newReminder in'''
-          call_new = '''                reminder: reminders[selectedTask.text],
-                onDelete: { delete(selectedTask.text) }
-            ) { newText, newReminder in'''
-          if call_old not in s:
-              raise SystemExit("Task editor call anchor missing")
-          s = s.replace(call_old, call_new, 1)
+          # Attach the delete callback to the existing task editor sheet.
+          if "onDelete: { delete(selectedTask.text) }" not in s:
+              anchor = "reminder: reminders[selectedTask.text]"
+              if anchor not in s:
+                  raise SystemExit("Task editor call anchor missing")
+              s = s.replace(anchor, anchor + ",\n                onDelete: { delete(selectedTask.text) }", 1)
 
           start = s.index("struct HFEditTaskView: View {")
           end = s.index("// MARK: - IDEAS", start)
           block = s[start:end]
-          old_decl = "    let onSave: (String, Date?) -> Void"
-          if old_decl not in block:
-              raise SystemExit("Task editor callback declaration missing")
-          block = block.replace(old_decl, old_decl + "\n    let onDelete: () -> Void", 1)
-          old_init = "    init(originalTask: String, reminder: Date?, onSave: @escaping (String, Date?) -> Void) {"
-          new_init = "    init(originalTask: String, reminder: Date?, onDelete: @escaping () -> Void, onSave: @escaping (String, Date?) -> Void) {"
-          if old_init not in block:
-              raise SystemExit("Task editor initializer missing")
-          block = block.replace(old_init, new_init, 1)
-          old_assign = "        self.onSave = onSave"
-          if old_assign not in block:
-              raise SystemExit("Task editor callback assignment missing")
-          block = block.replace(old_assign, old_assign + "\n        self.onDelete = onDelete", 1)
-          anchor = "                        if reminderEnabled {"
+
+          decl = "    let onSave: (String, Date?) -> Void"
+          if "let onDelete: () -> Void" not in block:
+              if decl not in block:
+                  raise SystemExit("Task editor callback declaration missing")
+              block = block.replace(decl, decl + "\n    let onDelete: () -> Void", 1)
+
+          old_init = "init(originalTask: String, reminder: Date?, onSave:"
+          new_init = "init(originalTask: String, reminder: Date?, onDelete: @escaping () -> Void, onSave:"
+          if new_init not in block:
+              if old_init not in block:
+                  raise SystemExit("Task editor initializer missing")
+              block = block.replace(old_init, new_init, 1)
+
+          if "self.onDelete = onDelete" not in block:
+              anchor = "self.onSave = onSave"
+              if anchor not in block:
+                  raise SystemExit("Task editor callback assignment missing")
+              block = block.replace(anchor, anchor + "\n        self.onDelete = onDelete", 1)
+
           button = '''                        Button(role: .destructive) {
                             onDelete()
                             dismiss()
@@ -574,9 +578,12 @@ jobs:
                         .padding(.top, 18)
 
 '''
-          if anchor not in block:
-              raise SystemExit("Task editor layout anchor missing")
-          block = block.replace(anchor, button + anchor, 1)
+          if "Label(\"Vymazať úlohu\"" not in block:
+              anchor = "                        HFPlainInput(title: \"Úloha\", text: $text, placeholder: \"Čo treba urobiť?\")"
+              if anchor not in block:
+                  raise SystemExit("Task editor layout anchor missing")
+              block = block.replace(anchor, button + anchor, 1)
+
           s = s[:start] + block + s[end:]
           p.write_text(s)
           PYTASKDELETE
