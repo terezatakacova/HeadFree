@@ -527,6 +527,84 @@ jobs:
           p.write_text(s)
           PYREMAIN
 
+          # Add a visible delete action to the task editor, including weekly tasks.
+          python3 - "$APP_DIR/ContentView.swift" <<'PYTASKDELETE'
+          import sys
+          from pathlib import Path
+          p = Path(sys.argv[1])
+          s = p.read_text()
+          old = '''            HFEditTaskView(
+                          originalTask: selectedTask.text,
+                          reminder: reminders[selectedTask.text]
+                      ) { newText, newReminder in
+                editTask(
+                    oldTask: selectedTask.text,
+                    rawNewTask: newText,
+                    newReminder: newReminder
+                )
+            }
+          }'''
+          new = '''            HFEditTaskView(
+                          originalTask: selectedTask.text,
+                          reminder: reminders[selectedTask.text],
+                          onSave: { newText, newReminder in
+                              editTask(
+                                  oldTask: selectedTask.text,
+                                  rawNewTask: newText,
+                                  newReminder: newReminder
+                              )
+                          },
+                          onDelete: { delete(selectedTask.text) }
+                      )
+          }'''
+          if old not in s:
+              raise SystemExit("Task editor call anchor missing")
+          s = s.replace(old, new, 1)
+          old_init = '''    let onSave: (String, Date?) -> Void
+
+    init(originalTask: String, reminder: Date?, onSave: @escaping (String, Date?) -> Void) {
+        self.originalTask = originalTask
+        self.reminder = reminder
+        self.onSave = onSave'''
+          new_init = '''    let onSave: (String, Date?) -> Void
+    let onDelete: () -> Void
+
+    init(originalTask: String, reminder: Date?, onSave: @escaping (String, Date?) -> Void, onDelete: @escaping () -> Void) {
+        self.originalTask = originalTask
+        self.reminder = reminder
+        self.onSave = onSave
+        self.onDelete = onDelete'''
+          if old_init not in s:
+              raise SystemExit("Task editor initializer anchor missing")
+          s = s.replace(old_init, new_init, 1)
+          anchor = '''                        if reminderEnabled {
+                            DatePicker("Kedy?", selection: $date, displayedComponents: [.date, .hourAndMinute])
+                                .padding(20)
+                                .tint(hfGreen)
+                                .overlay(alignment: .bottom) {
+                                    Rectangle().fill(hfLine).frame(height: 1)
+                                }
+                        }'''
+          replacement = anchor + '''
+
+                        Button(role: .destructive) {
+                            onDelete()
+                            dismiss()
+                        } label: {
+                            Label("Vymazať úlohu", systemImage: "trash")
+                                .frame(maxWidth: .infinity)
+                                .frame(height: 52)
+                                .background(.red.opacity(0.07), in: RoundedRectangle(cornerRadius: 16))
+                        }
+                        .tint(.red.opacity(0.85))
+                        .padding(.horizontal, 20)
+                        .padding(.top, 18)'''
+          if anchor not in s:
+              raise SystemExit("Task editor delete button anchor missing")
+          s = s.replace(anchor, replacement, 1)
+          p.write_text(s)
+          PYTASKDELETE
+
           curl -fsSL "https://raw.githubusercontent.com/terezatakacova/HeadFree/main/HeadFree_AppIcon_FINAL.jpg" -o /tmp/HeadFree_AppIcon_FINAL.jpg
           sips -s format png -z 1024 1024 /tmp/HeadFree_AppIcon_FINAL.jpg --out "$APP_DIR/Assets.xcassets/AppIcon.appiconset/AppIcon.png" >/dev/null
           cp "$APP_DIR/Assets.xcassets/AppIcon.appiconset/AppIcon.png" "$APP_DIR/Assets.xcassets/HeadFreeIntroIcon.imageset/HeadFreeIntroIcon.png"
