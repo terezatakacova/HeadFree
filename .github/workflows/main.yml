@@ -261,16 +261,26 @@ jobs:
 
           a = s.index("struct IdeasView: View {")
           b = s.index("// MARK: - SHOPPING", a)
-          ideas = r'''struct IdeasView: View {
+          ideas = r'''private enum HFIdeaSheet: Identifiable {
+              case add
+              case edit(String)
+              var id: String {
+                  switch self {
+                  case .add: return "add"
+                  case .edit(let value): return "edit-" + value
+                  }
+              }
+          }
+
+          struct IdeasView: View {
               @State private var ideas: [String] = storedArray("ideas")
-              @State private var editingIdea: String?
-              @State private var showAdd = false
+              @State private var activeSheet: HFIdeaSheet?
               var body: some View {
                   HFPageBackground {
                       ScrollView(showsIndicators: false) {
                           LazyVStack(spacing: 0) {
-                              ForEach(ideas, id: \.self) { idea in
-                                  Button { editingIdea = idea } label: {
+                              ForEach(ideas, id: \\.self) { idea in
+                                  Button { activeSheet = .edit(idea) } label: {
                                       HStack(spacing: 13) {
                                           Image(systemName: "lightbulb").foregroundStyle(hfGold)
                                           Text(idea).font(.system(size: 16)).foregroundStyle(hfText)
@@ -286,28 +296,31 @@ jobs:
                   .navigationTitle("Nápady").navigationBarTitleDisplayMode(.inline)
                   .toolbarBackground(hfBackground, for: .navigationBar)
                   .toolbar { ToolbarItem(placement: .topBarTrailing) {
-                      Button { showAdd = true } label: {
+                      Button { activeSheet = .add } label: {
                           Image(systemName: "plus").foregroundStyle(hfText).frame(width: 40, height: 40).background(hfGold.opacity(0.16), in: Circle())
                       }
                   }}
-                  .sheet(isPresented: Binding(get: { editingIdea != nil }, set: { if !$0 { editingIdea = nil } })) {
-                      HFTextEditView(title: "Upraviť nápad", placeholder: "Napíš nápad…", value: editingIdea ?? "", onSave: { value in
-                          if let i = ideas.firstIndex(of: editingIdea ?? "") { ideas[i] = value; UserDefaults.standard.set(ideas, forKey: "ideas") }
-                      }, onDelete: {
-                          ideas.removeAll { $0 == (editingIdea ?? "") }; UserDefaults.standard.set(ideas, forKey: "ideas")
-                      })
-                  }
-                  .sheet(isPresented: $showAdd) {
-                      HFTextAddView(title: "Nový nápad", placeholder: "Napíš nápad…") { value in
-                          let text = value.trimmingCharacters(in: .whitespacesAndNewlines)
-                          guard !text.isEmpty else { return }
-                          ideas.append(text); UserDefaults.standard.set(ideas, forKey: "ideas")
+                  .onAppear { ideas = storedArray("ideas") }
+                  .sheet(item: $activeSheet) { sheet in
+                      switch sheet {
+                      case .add:
+                          HFTextAddView(title: "Nový nápad", placeholder: "Napíš nápad…") { value in
+                              let text = value.trimmingCharacters(in: .whitespacesAndNewlines)
+                              guard !text.isEmpty else { return }
+                              ideas.append(text)
+                              saveArray(ideas, forKey: "ideas")
+                          }
+                      case .edit(let original):
+                          HFTextEditView(title: "Upraviť nápad", placeholder: "Napíš nápad…", value: original, onSave: { value in
+                              if let i = ideas.firstIndex(of: original) { ideas[i] = value; saveArray(ideas, forKey: "ideas") }
+                          }, onDelete: {
+                              ideas.removeAll { $0 == original }
+                              saveArray(ideas, forKey: "ideas")
+                          })
                       }
                   }
               }
-          }
-
-          '''
+          }'
           s = s[:a] + ideas + s[b:]
 
           # Replace the expense editor by source boundaries, not brittle whitespace matching.
