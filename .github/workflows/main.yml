@@ -279,7 +279,7 @@ jobs:
                   HFPageBackground {
                       ScrollView(showsIndicators: false) {
                           LazyVStack(spacing: 0) {
-                              ForEach(ideas, id: \\.self) { idea in
+                              ForEach(ideas, id: \.self) { idea in
                                   Button { activeSheet = .edit(idea) } label: {
                                       HStack(spacing: 13) {
                                           Image(systemName: "lightbulb").foregroundStyle(hfGold)
@@ -320,6 +320,7 @@ jobs:
                       }
                   }
               }
+          }
           '''
           s = s[:a] + ideas + s[b:]
 
