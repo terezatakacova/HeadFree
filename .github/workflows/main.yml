@@ -259,61 +259,6 @@ jobs:
           p = Path(sys.argv[1])
           s = p.read_text()
 
-          # Add a fully wired delete action to the task editor.
-          s = s.replace(
-              '    let onSave: (String, Date?) -> Void',
-              '    let onSave: (String, Date?) -> Void\n    let onDelete: () -> Void'
-          )
-          s = s.replace(
-              'init(originalTask: String, reminder: Date?, onSave: @escaping (String, Date?) -> Void) {',
-              'init(originalTask: String, reminder: Date?, onSave: @escaping (String, Date?) -> Void, onDelete: @escaping () -> Void) {'
-          )
-          s = s.replace(
-              '        self.onSave = onSave',
-              '        self.onSave = onSave\n        self.onDelete = onDelete'
-          )
-          s = s.replace(
-              '    let onDelete: () -> Void\n    @State private var text: String',
-              '    let onDelete: () -> Void\n    @State private var text: String'
-          )
-          # Replace the complete task editor sheet using stable boundaries.
-          sheet_start = s.index(".sheet(item: $editingTask) { selectedTask in")
-          sheet_end = s.index("\n        }\n    }\n\n    private func persist()", sheet_start)
-          sheet = '''.sheet(item: $editingTask) { selectedTask in
-                      HFEditTaskView(
-                          originalTask: selectedTask.text,
-                          reminder: reminders[selectedTask.text],
-                          onSave: { newText, newReminder in
-                              editTask(oldTask: selectedTask.text, rawNewTask: newText, newReminder: newReminder)
-                          },
-                          onDelete: { delete(selectedTask.text) }
-                      )
-                  }'''
-          s = s[:sheet_start] + sheet + s[sheet_end:]
-          # The replaced sheet already closes its own modifier; remove the leftover brace.
-          s = s.replace('''        }
-        }
-    }
-
-    private func persist()''', '''        }
-    }
-
-    private func persist()''', 1)
-          old_button = '''                Button(role: .destructive) { onDelete(); dismiss() } label: {
-                    Label("Vymazať úlohu", systemImage: "trash").frame(maxWidth: .infinity).frame(height: 48)
-                }.padding(.horizontal, 20).padding(.top, 14)
-
-          '''
-          s = s.replace(old_button, "")
-          old_input = 'HFPlainInput(title: "Úloha", text: $text, placeholder: "Čo treba urobiť?")'
-          new_input = '''HFPlainInput(title: "Úloha", text: $text, placeholder: "Čo treba urobiť?")
-                        Button(role: .destructive) { onDelete(); dismiss() } label: {
-                            Label("Vymazať úlohu", systemImage: "trash").frame(maxWidth: .infinity).frame(height: 48)
-                        }.padding(.horizontal, 20).padding(.top, 14)'''
-          s = s.replace(old_input, new_input)
-          # Keep the deletion of the final planned expense persisted as an empty list.
-          s = s.replace('UserDefaults.standard.set(expenses, forKey: "plannedExpenses")', 'UserDefaults.standard.removeObject(forKey: "plannedExpenses"); UserDefaults.standard.set(expenses, forKey: "plannedExpenses")')
-
           a = s.index("struct IdeasView: View {")
           b = s.index("// MARK: - SHOPPING", a)
           ideas = r'''struct IdeasView: View {
