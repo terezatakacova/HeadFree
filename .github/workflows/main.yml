@@ -320,7 +320,7 @@ jobs:
                       }
                   }
               }
-          }'
+          '''
           s = s[:a] + ideas + s[b:]
 
           # Replace the expense editor by source boundaries, not brittle whitespace matching.
